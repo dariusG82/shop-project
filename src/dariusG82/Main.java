@@ -1,10 +1,21 @@
 package dariusG82;
 
+import dariusG82.services.accounting.*;
+
+import java.io.IOException;
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Main {
-
+    public static Balance balance = new Balance();
     public static void main(String[] args) {
+//        MainService mainService = new MainService();
+
+//        balance.addRecordToBalance(CashOperation.DAILY_INCOME, LocalDate.of(2022,3,9), 1500);
+//        balance.addRecordToBalance(CashOperation.DAILY_EXPENSE, LocalDate.of(2022,3,9),520);
+
         Scanner scanner = new Scanner(System.in);
         String input;
         int option = 0;
@@ -77,19 +88,87 @@ public class Main {
     }
 
     private static void getBalanceForADay(Scanner scanner){
-        //TODO implement method
+        System.out.println("Enter the day for balance - format yyyy-mm-dd");
+        while (true){
+            try {
+                LocalDate date = getLocalDate(scanner);
+                double cashBalance = balance.getDaysBalance(date);
+                System.out.println("*******************");
+                System.out.printf("Balance for %s is: %.2f\n", date, cashBalance);
+                System.out.println("*******************");
+                return;
+            } catch (NumberFormatException e){
+                System.out.println("Wrong format, try again");
+            } catch (DateTimeException e){
+                System.out.println("Wrong day/month/year entered, try again");
+            }
+        }
+
     }
 
     private static void getBalanceForAMonth(Scanner scanner){
-        //TODO implement method
+        System.out.println("Enter the month for balance - format yyyy-mm");
+        while (true){
+            try {
+                LocalDate date = getLocalDate(scanner);
+                double cashBalance = balance.getMonthBalance(date);
+                System.out.println("*******************");
+                System.out.printf("Balance for %d %s is: %.2f\n",date.getYear(), date.getMonth(), cashBalance);
+                System.out.println("*******************");
+                return;
+            } catch (NumberFormatException e){
+                System.out.println("Wrong format, try again");
+            } catch (DateTimeException e){
+                System.out.println("Wrong day/month/year entered, try again");
+            }
+        }
     }
 
     private static void getSalesDocumentsByDay(Scanner scanner){
-        //TODO implement method
+
+        System.out.println("Enter the day for sales documents balance - format yyyy-mm-dd");
+        while (true){
+            try {
+                LocalDate date = getLocalDate(scanner);
+                ArrayList<CashRecord> salesForDay = balance.getDailySaleDocuments(date, CashOperation.DAILY_INCOME);
+                System.out.printf("Sales documents for %s day is:\n", date);
+                for(CashRecord cashRecord : salesForDay){
+                    SalesCashRecord salesCashRecord = (SalesCashRecord) cashRecord;
+                    System.out.println("*******************");
+                    System.out.printf("Sales document id: %s, amount = %.2f\n",
+                            salesCashRecord.getRecordID(), salesCashRecord.getAmount());
+                    System.out.println("*******************");
+                }
+                return;
+            } catch (NumberFormatException e){
+                System.out.println("Wrong format, try again");
+            } catch (DateTimeException e){
+                System.out.println("Wrong day/month/year entered, try again");
+            }
+        }
     }
 
     private static void getReturnsDocumentsByDay(Scanner scanner){
-        //TODO implement method
+        System.out.println("Enter the day for returns documents balance - format yyyy-mm-dd");
+        while (true){
+            try {
+                LocalDate date = getLocalDate(scanner);
+                ArrayList<CashRecord> salesForDay = balance.getDailySaleDocuments(date, CashOperation.DAILY_EXPENSE);
+                System.out.printf("Return documents for %s is:\n", date);
+                for(CashRecord cashRecord : salesForDay){
+                    ReturnCashRecord returnCashRecord = (ReturnCashRecord) cashRecord;
+                    System.out.println("*******************");
+                    System.out.printf("Return document id: %s, amount = %.2f\n",
+                            returnCashRecord.getRecordID(), returnCashRecord.getAmount());
+                    System.out.println("*******************");
+                }
+                return;
+            } catch (NumberFormatException e){
+                System.out.println("Wrong format, try again");
+            } catch (DateTimeException e){
+                System.out.println("Wrong day/month/year entered, try again");
+            }
+        }
     }
 
     private static void getSalesBySellerByMonth(Scanner scanner){
@@ -134,5 +213,19 @@ public class Main {
         System.out.println("[2] - Register new user");
         System.out.println("[3] - Remove user");
         System.out.println("[9] - Return to previous menu");
+    }
+
+    private static LocalDate getLocalDate(Scanner scanner) throws DateTimeException, NumberFormatException{
+        String input;
+        input = scanner.nextLine();
+
+        int year = Integer.parseInt(input.substring(0,4));
+        int month = Integer.parseInt(input.substring(5,7));
+        int day = 1;
+        if(input.length() == 10){
+            day = Integer.parseInt(input.substring(8));
+        }
+
+        return LocalDate.of(year, month,day);
     }
 }
