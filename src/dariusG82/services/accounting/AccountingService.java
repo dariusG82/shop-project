@@ -1,28 +1,32 @@
 package dariusG82.services.accounting;
 
+import dariusG82.services.accounting.finance.CashOperation;
+import dariusG82.services.accounting.finance.CashRecord;
+import dariusG82.services.accounting.finance.ReturnCashRecord;
+import dariusG82.services.accounting.finance.SalesCashRecord;
+
 import java.io.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-public class Balance {
+public class AccountingService {
     private int returnDocumentsCount = 0;
     private int salesDocumentCount = 0;
-
-    private final String path = "src/dariusG82/services/accounting/salesJournal.txt";
+    private final String path = "src/dariusG82/services/data/salesJournal.txt";
 //    private ArrayList<CashRecord> fullBalance = new ArrayList<>();
 
-    public void addRecordToBalance(CashOperation cashOperation, LocalDate date, double cashAmount) throws IOException {
+    public void addRecordToBalance(CashOperation cashOperation, LocalDate date, double cashAmount, String sellerUsername) throws IOException {
         ArrayList<CashRecord> allCashRecords = getAllRecords();
         switch (cashOperation){
             case DAILY_INCOME -> {
                 int recordNr = getNewSalesDocumentNumber();
-                SalesCashRecord salesRecord = new SalesCashRecord(recordNr, date, cashAmount);
+                SalesCashRecord salesRecord = new SalesCashRecord(recordNr, date, cashAmount, sellerUsername);
                 allCashRecords.add(salesRecord);
             }
             case DAILY_EXPENSE -> {
                 int recordNr = getNewReturnDocumentNumber();
-                ReturnCashRecord returnRecord = new ReturnCashRecord(recordNr, date, cashAmount);
+                ReturnCashRecord returnRecord = new ReturnCashRecord(recordNr, date, cashAmount, sellerUsername);
                 allCashRecords.add(returnRecord);
             }
         }
@@ -42,15 +46,16 @@ public class Balance {
                 LocalDate operationDate = getOperationDate(scanner.nextLine());
                 CashOperation cashOperation = getCashOperation(scanner.nextLine());
                 double amount = getAmount(scanner.nextLine());
+                String sellerUsername = scanner.nextLine();
                 scanner.nextLine();
 
                 if(operationDate != null && cashOperation != null && amount != 0.0){
                     if(id.startsWith("SF")){
-                        cashRecords.add(new SalesCashRecord(id, operationDate, amount));
+                        cashRecords.add(new SalesCashRecord(id, operationDate, amount, sellerUsername));
                         salesCounter++;
                     }
                     if(id.startsWith("RE")){
-                        cashRecords.add(new ReturnCashRecord(id, operationDate, amount));
+                        cashRecords.add(new ReturnCashRecord(id, operationDate, amount, sellerUsername));
                         returnCounter++;
                     }
 
@@ -205,5 +210,44 @@ public class Balance {
 
     private void setSalesDocumentCount(int salesDocumentCount) {
         this.salesDocumentCount = salesDocumentCount;
+    }
+
+    public ArrayList<SalesCashRecord> getSalesReportBySalesperson(String username, int year, int month) {
+        ArrayList<SalesCashRecord> recordsBySeller = getSalesRecordsForSeller(username);
+
+        return getSalesRecordsForMonth(recordsBySeller, year, month);
+    }
+
+    public double getTotalSalesByReport(ArrayList<SalesCashRecord> records){
+        double totalSales = 0.0;
+        for (SalesCashRecord record : records){
+            totalSales += record.getAmount();
+        }
+        return totalSales;
+    }
+
+    private ArrayList<SalesCashRecord> getSalesRecordsForSeller(String sellerUsername){
+        ArrayList<CashRecord> allRecords = getAllRecords();
+        ArrayList<SalesCashRecord> salesCashRecords = new ArrayList<>();
+
+        for (CashRecord record : allRecords){
+            if(record instanceof SalesCashRecord salesRecord && record.getSellerUsername().equals(sellerUsername)){
+                salesCashRecords.add(salesRecord);
+            }
+        }
+
+        return salesCashRecords;
+    }
+
+    private ArrayList<SalesCashRecord> getSalesRecordsForMonth(ArrayList<SalesCashRecord> records, int year, int month){
+        ArrayList<SalesCashRecord> recordsForMonth = new ArrayList<>();
+
+        for (SalesCashRecord salesCashRecord : records){
+            if(salesCashRecord.getDate().getYear() == year && salesCashRecord.getDate().getMonthValue() == month){
+                recordsForMonth.add(salesCashRecord);
+            }
+        }
+
+        return recordsForMonth;
     }
 }

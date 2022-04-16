@@ -1,6 +1,6 @@
-package dariusG82.orders;
+package dariusG82.services.accounting.orders;
 
-import dariusG82.items.Item;
+import dariusG82.services.warehouse.items.Item;
 
 import java.util.ArrayList;
 

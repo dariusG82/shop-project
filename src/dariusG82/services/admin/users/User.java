@@ -1,12 +1,12 @@
-package dariusG82.users;
+package dariusG82.services.admin.users;
 
 public class User {
 
-    public String name;
-    public String surname;
-    public String username;
-    public String password;
-    public UserType userType;
+    private final String name;
+    private final String surname;
+    private final String username;
+    private final String password;
+    private final UserType userType;
 
     public User(String name, String surname, String username, String password, UserType userType) {
         this.name = name;

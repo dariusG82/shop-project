@@ -1,4 +1,4 @@
-package dariusG82.items;
+package dariusG82.services.warehouse.items;
 
 public class Item {
     public int itemID;
