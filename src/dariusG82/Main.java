@@ -7,6 +7,7 @@ import dariusG82.services.admin.AdminService;
 import dariusG82.services.admin.users.User;
 import dariusG82.services.admin.users.UserNotFoundException;
 import dariusG82.services.admin.users.UserType;
+import dariusG82.services.partners.helpers.PartnerDoesNotExistExeption;
 
 import java.io.IOException;
 import java.time.DateTimeException;
@@ -248,7 +249,7 @@ public class Main {
         }
     }
 
-    private static void addBusinessPartner(Scanner scanner){
+    private static void addBusinessPartner(Scanner scanner) {
         System.out.print("Enter client name: ");
         String name = scanner.nextLine();
         System.out.print("Enter client businessID: ");
@@ -261,15 +262,36 @@ public class Main {
         String country = scanner.nextLine();
 
         BusinessPartner businessPartner = new BusinessPartner(name, businessId, streetAddress, city, country);
-        businessService.addNewBusinessPartner(businessPartner);
+        try {
+            businessService.addNewBusinessPartner(businessPartner);
+            System.out.printf("New partner %s added successfully!\n", businessPartner.getPartnerName());
+        } catch (IOException e) {
+            System.out.printf("Partner %s was not added\n", name);
+        }
     }
 
     private static void getClientIDByClientName(Scanner scanner) {
-        //TODO implement method
+        System.out.print("Enter client name: ");
+        String name = scanner.nextLine();
+        try {
+            BusinessPartner partner = businessService.getPartnerByName(name);
+            System.out.printf("Client %s id is: %s\n", name, partner.getBusinessID());
+        } catch (PartnerDoesNotExistExeption e) {
+            System.out.println(e.getMessage());
+        }
+
     }
 
-    private static void deleteClient(Scanner scanner){
-        //TODO implement method
+    private static void deleteClient(Scanner scanner) {
+        System.out.print("Enter name of client you want to delete: ");
+        String name = scanner.nextLine();
+        try {
+            BusinessPartner partner = businessService.getPartnerByName(name);
+            businessService.deletePartner(partner);
+            System.out.printf("Partner %s successfully deleted\n", partner.getPartnerName());
+        } catch (PartnerDoesNotExistExeption e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public static void loginAsSalesman(Scanner scanner, User currentUser) {
@@ -288,19 +310,19 @@ public class Main {
         System.out.println("[9] - Return to previous menu");
     }
 
-    private static void createNewSalesOperation(Scanner scanner){
+    private static void createNewSalesOperation(Scanner scanner) {
         //TODO implement method
     }
 
-    private static void findSalesDocumentByID(Scanner scanner){
+    private static void findSalesDocumentByID(Scanner scanner) {
         //TODO implement method
     }
 
-    private static void createNewReturnOperation(Scanner scanner){
+    private static void createNewReturnOperation(Scanner scanner) {
         //TODO implement method
     }
 
-    private static void findReturnDocumentByID(Scanner scanner){
+    private static void findReturnDocumentByID(Scanner scanner) {
         //TODO implement method
     }
 
@@ -317,7 +339,7 @@ public class Main {
                 System.out.println("Wrong input format, try again");
             }
             switch (option) {
-                case 1 -> printListOfUsers(scanner);
+                case 1 -> printListOfUsers();
                 case 2 -> registerNewUser(scanner);
                 case 3 -> removeUserByUsername(scanner, currentUser);
                 case 9 -> {
@@ -351,7 +373,7 @@ public class Main {
         return LocalDate.of(year, month, day);
     }
 
-    private static void printListOfUsers(Scanner scanner) {
+    private static void printListOfUsers() {
         ArrayList<User> users = adminService.getAllUsers();
         System.out.println("********************");
         for (User user : users) {
