@@ -1,4 +1,4 @@
-package dariusG82.services.partners.helpers;
+package dariusG82.services.custom_exeptions;
 
 public class PartnerDoesNotExistExeption extends Exception{
 

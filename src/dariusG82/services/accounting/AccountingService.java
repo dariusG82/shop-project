@@ -4,6 +4,7 @@ import dariusG82.services.accounting.finance.CashOperation;
 import dariusG82.services.accounting.finance.CashRecord;
 import dariusG82.services.accounting.finance.ReturnCashRecord;
 import dariusG82.services.accounting.finance.SalesCashRecord;
+import dariusG82.services.warehouse.items.Item;
 
 import java.io.*;
 import java.time.LocalDate;
@@ -32,6 +33,14 @@ public class AccountingService {
         }
 
         rewriteDailyBalance(allCashRecords);
+    }
+
+    public void updateSalesRecords(Item item, int quantity, String username) throws IOException {
+        CashOperation cashOperation = CashOperation.DAILY_INCOME;
+        LocalDate date = LocalDate.now();
+        double amount = item.getSalePrice() * quantity;
+
+        addRecordToBalance(cashOperation, date, amount, username);
     }
 
     public ArrayList<CashRecord> getAllRecords() {

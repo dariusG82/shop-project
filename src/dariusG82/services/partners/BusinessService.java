@@ -1,6 +1,7 @@
 package dariusG82.services.partners;
 
-import dariusG82.services.partners.helpers.PartnerDoesNotExistExeption;
+import dariusG82.services.custom_exeptions.PartnerDoesNotExistExeption;
+import dariusG82.services.custom_exeptions.WrongDataPathExeption;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -10,38 +11,64 @@ public class BusinessService {
 
     private final String path = "src/dariusG82/services/data/clients.txt";
 
-    public void addNewBusinessPartner(BusinessPartner partner) throws IOException {
+    public void addNewBusinessPartner(BusinessPartner partner) throws IOException, WrongDataPathExeption {
         ArrayList<BusinessPartner> partners = getPartners();
 
-        assert partners != null;
-        partners.add(partner);
-
-        writeDataToFile(partners);
+        if (partners != null) {
+            partners.add(partner);
+            writeDataToFile(partners);
+        } else {
+            throw new WrongDataPathExeption();
+        }
     }
 
-    public BusinessPartner getPartnerByName(String name) throws PartnerDoesNotExistExeption{
+    public boolean isClientInDatabase(String partnerName) {
         ArrayList<BusinessPartner> partners = getPartners();
 
-        assert partners != null;
-        for (BusinessPartner partner : partners){
-            if(partner.getPartnerName().equals(name)){
-                return partner;
+        if (partners == null) {
+            return false;
+        }
+        for (BusinessPartner partner : partners) {
+            if (partner.getPartnerName().equals(partnerName)) {
+                return true;
             }
         }
+        return false;
+    }
 
+    public BusinessPartner getPartnerByName(String name) throws PartnerDoesNotExistExeption, WrongDataPathExeption {
+        ArrayList<BusinessPartner> partners = getPartners();
+
+        if (partners != null) {
+            for (BusinessPartner partner : partners) {
+                if (partner.getPartnerName().equals(name)) {
+                    return partner;
+                }
+            }
+        } else {
+            throw new WrongDataPathExeption();
+        }
         throw new PartnerDoesNotExistExeption();
     }
 
-    public void deletePartner(BusinessPartner partner) {
+    public void deletePartner(BusinessPartner partner) throws WrongDataPathExeption {
         ArrayList<BusinessPartner> partners = getPartners();
 
-        assert partners != null;
-        partners.remove(partner);
 
-        writeDataToFile(partners);
+        if (partners != null) {
+            for (BusinessPartner businessPartner : partners) {
+                if (businessPartner.equals(partner)) {
+                    partners.remove(partner);
+                    break;
+                }
+            }
+            writeDataToFile(partners);
+        } else {
+            throw new WrongDataPathExeption();
+        }
     }
 
-    private ArrayList<BusinessPartner> getPartners(){
+    private ArrayList<BusinessPartner> getPartners() {
         try {
             Scanner scanner = new Scanner(new File(path));
             ArrayList<BusinessPartner> partners = new ArrayList<>();
@@ -77,8 +104,8 @@ public class BusinessService {
             }
 
             printWriter.close();
-        } catch (IOException e){
-            // TODO Catch Exception - create new file
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
         }
 
     }

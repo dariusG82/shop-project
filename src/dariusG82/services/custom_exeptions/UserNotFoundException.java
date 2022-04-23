@@ -1,4 +1,4 @@
-package dariusG82.services.admin.users;
+package dariusG82.services.custom_exeptions;
 
 public class UserNotFoundException  extends Exception{
 

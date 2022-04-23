@@ -1,5 +1,7 @@
 package dariusG82.services.partners;
 
+import java.util.Objects;
+
 public class BusinessPartner {
     public String partnerName;
     public String businessID;
@@ -33,5 +35,18 @@ public class BusinessPartner {
 
     public String getCountry() {
         return country;
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BusinessPartner partner = (BusinessPartner) o;
+        return Objects.equals(partnerName, partner.partnerName) && Objects.equals(businessID, partner.businessID) && Objects.equals(streetAddress, partner.streetAddress) && Objects.equals(city, partner.city) && Objects.equals(country, partner.country);
     }
 }

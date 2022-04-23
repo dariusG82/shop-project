@@ -1,13 +1,19 @@
 package dariusG82;
 
 import dariusG82.services.accounting.AccountingService;
-import dariusG82.services.accounting.finance.*;
-import dariusG82.services.partners.*;
+import dariusG82.services.accounting.finance.CashOperation;
+import dariusG82.services.accounting.finance.CashRecord;
+import dariusG82.services.accounting.finance.ReturnCashRecord;
+import dariusG82.services.accounting.finance.SalesCashRecord;
+import dariusG82.services.accounting.orders.PurchaseOrder;
 import dariusG82.services.admin.AdminService;
 import dariusG82.services.admin.users.User;
-import dariusG82.services.admin.users.UserNotFoundException;
 import dariusG82.services.admin.users.UserType;
-import dariusG82.services.partners.helpers.PartnerDoesNotExistExeption;
+import dariusG82.services.custom_exeptions.*;
+import dariusG82.services.partners.BusinessPartner;
+import dariusG82.services.partners.BusinessService;
+import dariusG82.services.warehouse.WarehouseService;
+import dariusG82.services.warehouse.items.Item;
 
 import java.io.IOException;
 import java.time.DateTimeException;
@@ -19,6 +25,7 @@ public class Main {
     public static AccountingService accountingService = new AccountingService();
     public static AdminService adminService = new AdminService();
     public static BusinessService businessService = new BusinessService();
+    public static WarehouseService warehouseService = new WarehouseService();
 
     public static void main(String[] args) {
 //        MainService mainService = new MainService();
@@ -94,17 +101,9 @@ public class Main {
 
     public static void loginAsAccountant(Scanner scanner, User currentUser) {
         System.out.printf("Welcome, %s %s!\n", currentUser.getName(), currentUser.getSurname());
-        String input;
-        int option = 0;
         while (true) {
             printAccountantMenu();
-            try {
-                input = scanner.nextLine();
-                option = Integer.parseInt(input);
-            } catch (NumberFormatException e) {
-                System.out.println("Wrong input format, try again");
-            }
-            switch (option) {
+            switch (getIntegerFromScanner(scanner)) {
                 case 1 -> getBalanceForADay(scanner);
                 case 2 -> getBalanceForAMonth(scanner);
                 case 3 -> getSalesDocumentsByDay(scanner);
@@ -265,6 +264,8 @@ public class Main {
         try {
             businessService.addNewBusinessPartner(businessPartner);
             System.out.printf("New partner %s added successfully!\n", businessPartner.getPartnerName());
+        } catch (WrongDataPathExeption e) {
+            System.out.println(e.getMessage());
         } catch (IOException e) {
             System.out.printf("Partner %s was not added\n", name);
         }
@@ -276,10 +277,9 @@ public class Main {
         try {
             BusinessPartner partner = businessService.getPartnerByName(name);
             System.out.printf("Client %s id is: %s\n", name, partner.getBusinessID());
-        } catch (PartnerDoesNotExistExeption e) {
+        } catch (WrongDataPathExeption | PartnerDoesNotExistExeption e) {
             System.out.println(e.getMessage());
         }
-
     }
 
     private static void deleteClient(Scanner scanner) {
@@ -289,15 +289,29 @@ public class Main {
             BusinessPartner partner = businessService.getPartnerByName(name);
             businessService.deletePartner(partner);
             System.out.printf("Partner %s successfully deleted\n", partner.getPartnerName());
-        } catch (PartnerDoesNotExistExeption e) {
+        } catch (WrongDataPathExeption | PartnerDoesNotExistExeption e) {
             System.out.println(e.getMessage());
         }
     }
 
     public static void loginAsSalesman(Scanner scanner, User currentUser) {
         System.out.printf("Welcome, %s %s!\n", currentUser.getName(), currentUser.getSurname());
-        printSalesmanMenu();
-        //TODO implement method
+        while (true) {
+            printSalesmanMenu();
+            switch (getIntegerFromScanner(scanner)) {
+                case 1 -> createNewSalesOperation(scanner, currentUser);
+                case 2 -> findSalesDocumentByID(scanner);
+                case 3 -> createNewReturnOperation(scanner, currentUser);
+                case 4 -> findReturnDocumentByID(scanner);
+                case 5 -> createPurchaseOrderToWarehouse(scanner);
+                case 6 -> receiveGoodsToWarehouse(scanner);
+                case 7 -> showWarehouseStock();
+                case 9 -> {
+                    return;
+                }
+                default -> System.out.println("Unavailable option");
+            }
+        }
     }
 
     public static void printSalesmanMenu() {
@@ -307,18 +321,50 @@ public class Main {
         System.out.println("[2] - Find sales document by document Nr.");
         System.out.println("[3] - Return operation");
         System.out.println("[4] - Find return document by document Nr. ");
+        System.out.println("[5] - Create goods order to shop");
+        System.out.println("[6] - Receive goods to warehouse by order Nr.");
+        System.out.println("[7] - Print warehouse stock");
         System.out.println("[9] - Return to previous menu");
     }
 
-    private static void createNewSalesOperation(Scanner scanner) {
-        //TODO implement method
+    private static void createNewSalesOperation(Scanner scanner, User currentUser) {
+        System.out.println("Creating new Sales document");
+        System.out.println("Enter client name: ");
+        String partnerName = scanner.nextLine();
+        if (!businessService.isClientInDatabase(partnerName)) {
+            System.out.printf("Client %s is not in database, ask your accountant to add new client\n", partnerName);
+            return;
+        }
+        Item item = getItemByName(scanner);
+        int quantity;
+        while (true){
+            System.out.print("Enter quantity for sale: ");
+            quantity = getIntegerFromScanner(scanner);
+            if(quantity == 0){
+                System.out.println("Quantity cannot be 0");
+            } else if (quantity < item.getCurrentQuantity()){
+                System.out.println("Not enough items in stock");
+            } else {
+                break;
+            }
+        }
+
+        try {
+            warehouseService.updateWarehouseStock(item, -quantity);
+            accountingService.updateSalesRecords(item, quantity, currentUser.getUsername());
+        } catch (ItemIsNotInWarehouseExeption e) {
+            System.out.println(e.getMessage());
+        } catch (IOException e) {
+            System.out.println("Sold operation failed, cannot update stock");
+        }
+
     }
 
     private static void findSalesDocumentByID(Scanner scanner) {
         //TODO implement method
     }
 
-    private static void createNewReturnOperation(Scanner scanner) {
+    private static void createNewReturnOperation(Scanner scanner, User currentUser) {
         //TODO implement method
     }
 
@@ -326,19 +372,120 @@ public class Main {
         //TODO implement method
     }
 
+    private static void createPurchaseOrderToWarehouse(Scanner scanner) {
+        int purchaseNr;
+        try {
+            purchaseNr = warehouseService.getNewPurchaseOrderNumber();
+        } catch (IOException | WrongDataPathExeption e) {
+            System.out.println(e.getMessage());
+            return;
+        }
+        System.out.printf("Creating purchase order Nr.: %d\n", purchaseNr);
+        System.out.println("***********************");
+        while (true){
+            System.out.println("[1] - Add item to purchase order / [2] - Finish order");
+            switch (getIntegerFromScanner(scanner)){
+                case 1 ->{
+                    System.out.print("Enter item name: ");
+                    String itemName = scanner.nextLine();
+                    double purchasePrice = getPurchasePriceFromScanner(scanner);
+                    int purchaseQuantity = getQuantityFromScanner(scanner);
+                    Item item = new Item(itemName, purchasePrice, purchaseQuantity);
+                    PurchaseOrder purchaseOrder = new PurchaseOrder(purchaseNr, item);
+                    try {
+                        warehouseService.addItemToPurchaseOrder(purchaseOrder);
+                        System.out.printf("Item %s was successfully added to order %d\n", itemName, purchaseNr);
+                    } catch (IOException e) {
+                        System.out.printf("Item %s was not added, wrong data file location\n", itemName);
+                    }
+                }
+                case 2 -> {
+                    return;
+                }
+                default -> System.out.println("Wrong choice, choose again");
+            }
+        }
+    }
+
+    public static void receiveGoodsToWarehouse(Scanner scanner){
+        int purchaseNr = 0;
+        do {
+            System.out.print("Enter goods purchase order nr: ");
+            String input = scanner.nextLine();
+            try {
+                purchaseNr = Integer.parseInt(input);
+            } catch (NumberFormatException e){
+                System.out.println("Wrong input, try agaim");
+            }
+            if(purchaseNr <= 0 ){
+                System.out.println("Order number cannot be 0");
+            } else {
+                break;
+            }
+        } while (true);
+        try {
+            warehouseService.receiveGoods(purchaseNr);
+            System.out.println("Goods successfully added to warehouse stock");
+            System.out.println("**********************");
+        } catch (PurchaseOrderDoesNotExistExeption | IOException e){
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public static void showWarehouseStock(){
+
+    }
+
+    private static double getPurchasePriceFromScanner(Scanner scanner) {
+        do {
+            try {
+                System.out.print("Enter item purchase price: ");
+                String purchasePriceString = scanner.nextLine();
+                double purchasePrice = Double.parseDouble(purchasePriceString);
+                if(purchasePrice > 0){
+                    return purchasePrice;
+                }
+            } catch (NumberFormatException e){
+                System.out.println("Wrong input, try again");
+            }
+        } while (true);
+    }
+
+    private static int getQuantityFromScanner(Scanner scanner){
+        do {
+            try {
+                System.out.print("Enter item purchase quantity: ");
+                String purchaseQuantityString = scanner.nextLine();
+                int quantity = Integer.parseInt(purchaseQuantityString);
+                if(quantity > 0){
+                    return quantity;
+                }
+            } catch (NumberFormatException e){
+                System.out.println("Wrong input, try again");
+            }
+        } while (true);
+    }
+
+    private static Item getItemByName(Scanner scanner) {
+        while (true) {
+            System.out.print("Enter sold item name: ");
+            String itemName = scanner.nextLine();
+
+            try {
+                return warehouseService.getItemFromWarehouse(itemName);
+            } catch (ItemIsNotInWarehouseExeption e) {
+                System.out.println(e.getMessage());
+            }
+
+            System.out.println("Wrong item name, try again!!");
+        }
+    }
+
     public static void loginAsITSupport(Scanner scanner, User currentUser) {
         System.out.printf("Welcome, %s %s!\n", currentUser.getName(), currentUser.getSurname());
-        String input;
-        int option = 0;
         while (true) {
             printITSupportMenu();
-            try {
-                input = scanner.nextLine();
-                option = Integer.parseInt(input);
-            } catch (NumberFormatException e) {
-                System.out.println("Wrong input format, try again");
-            }
-            switch (option) {
+            switch (getIntegerFromScanner(scanner)) {
                 case 1 -> printListOfUsers();
                 case 2 -> registerNewUser(scanner);
                 case 3 -> removeUserByUsername(scanner, currentUser);
@@ -458,5 +605,17 @@ public class Main {
         } catch (IOException e) {
             System.out.println("Database file was not found");
         }
+    }
+
+    private static int getIntegerFromScanner(Scanner scanner) {
+        String input;
+        int option = 0;
+        try {
+            input = scanner.nextLine();
+            option = Integer.parseInt(input);
+        } catch (NumberFormatException e) {
+            System.out.println("Wrong input format, try again");
+        }
+        return option;
     }
 }

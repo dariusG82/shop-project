@@ -1,7 +1,7 @@
 package dariusG82.services.admin;
 
 import dariusG82.services.admin.users.User;
-import dariusG82.services.admin.users.UserNotFoundException;
+import dariusG82.services.custom_exeptions.UserNotFoundException;
 import dariusG82.services.admin.users.UserType;
 
 import java.io.*;
