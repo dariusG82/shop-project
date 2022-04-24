@@ -1,0 +1,18 @@
+SF 1
+Tusinukas
+10
+0.39
+Saulius
+
+SF 1
+Trintukas
+10
+0.29
+Saulius
+
+SF 2
+Tusinukas
+15
+0.39
+Neringa
+

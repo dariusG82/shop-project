@@ -1,0 +1,8 @@
+1|PurchaseOrdersNr-0
+
+2|SalesOrderNumber-2
+
+3|ReturnOrderNr-2
+
+4|CurrentBalance-10012.4
+

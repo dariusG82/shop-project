@@ -1,19 +1,14 @@
 package dariusG82;
 
-import dariusG82.services.accounting.AccountingService;
-import dariusG82.services.accounting.finance.CashOperation;
-import dariusG82.services.accounting.finance.CashRecord;
-import dariusG82.services.accounting.finance.ReturnCashRecord;
-import dariusG82.services.accounting.finance.SalesCashRecord;
-import dariusG82.services.accounting.orders.PurchaseOrder;
-import dariusG82.services.admin.AdminService;
-import dariusG82.services.admin.users.User;
-import dariusG82.services.admin.users.UserType;
-import dariusG82.services.custom_exeptions.*;
-import dariusG82.services.partners.BusinessPartner;
-import dariusG82.services.partners.BusinessService;
-import dariusG82.services.warehouse.WarehouseService;
-import dariusG82.services.warehouse.items.Item;
+import dariusG82.classes.services.*;
+import dariusG82.classes.accounting.finance.*;
+import dariusG82.classes.accounting.orders.*;
+import dariusG82.classes.admin.users.User;
+import dariusG82.classes.admin.users.UserType;
+import dariusG82.classes.custom_exeptions.*;
+import dariusG82.classes.partners.BusinessPartner;
+import dariusG82.classes.warehouse.Item;
+import dariusG82.classes.warehouse.SoldItem;
 
 import java.io.IOException;
 import java.time.DateTimeException;
@@ -28,11 +23,6 @@ public class Main {
     public static WarehouseService warehouseService = new WarehouseService();
 
     public static void main(String[] args) {
-//        MainService mainService = new MainService();
-
-//        balance.addRecordToBalance(CashOperation.DAILY_INCOME, LocalDate.of(2022,3,9), 1500);
-//        balance.addRecordToBalance(CashOperation.DAILY_EXPENSE, LocalDate.of(2022,3,9),520);
-
         Scanner scanner = new Scanner(System.in);
         String input;
         int option = 0;
@@ -335,89 +325,246 @@ public class Main {
             System.out.printf("Client %s is not in database, ask your accountant to add new client\n", partnerName);
             return;
         }
-        Item item = getItemByName(scanner);
-        int quantity;
-        while (true){
-            System.out.print("Enter quantity for sale: ");
-            quantity = getIntegerFromScanner(scanner);
-            if(quantity == 0){
-                System.out.println("Quantity cannot be 0");
-            } else if (quantity < item.getCurrentQuantity()){
-                System.out.println("Not enough items in stock");
-            } else {
-                break;
-            }
-        }
-
         try {
-            warehouseService.updateWarehouseStock(item, -quantity);
-            accountingService.updateSalesRecords(item, quantity, currentUser.getUsername());
-        } catch (ItemIsNotInWarehouseExeption e) {
-            System.out.println(e.getMessage());
-        } catch (IOException e) {
-            System.out.println("Sold operation failed, cannot update stock");
+            int salesOrderID = accountingService.getNewSalesDocumentNumber();
+            SalesOrder newOrder = new SalesOrder(salesOrderID);
+            while (true) {
+                System.out.println("[1] - Add item to sales order / [2] - Finish sales order");
+
+                switch (getIntegerFromScanner(scanner)) {
+                    case 1 -> {
+                        Item item = getItemByName(scanner);
+                        int quantity;
+                        while (true) {
+                            System.out.print("Enter quantity for sale: ");
+                            quantity = getIntegerFromScanner(scanner);
+                            if (quantity == 0) {
+                                System.out.println("Quantity cannot be 0");
+                            } else if (quantity > item.getCurrentQuantity()) {
+                                System.out.println("Not enough items in stock");
+                            } else if (item.getCurrentQuantity() == 0) {
+                                System.out.println("Item is out of stock");
+                                return;
+                            } else {
+                                break;
+                            }
+                        }
+                        try {
+                            SalesOrderLine salesOrderLine = new SalesOrderLine(salesOrderID, item.getItemName(), quantity, item.getSalePrice(), currentUser.getName());
+                            accountingService.updateBalance(salesOrderLine);
+                            warehouseService.updateWarehouseStock(item, -quantity);
+                            accountingService.updateSalesRecords(salesOrderID, item, quantity, currentUser.getUsername());
+                            newOrder.addSalesOrderLineToOrder(salesOrderLine);
+                        } catch (NegativeBalanceException e) {
+                            System.out.println(e.getMessage());
+                        } catch (ItemIsNotInWarehouseExeption e) {
+                            System.out.println(e.getMessage());
+                            return;
+                        } catch (IOException e) {
+                            System.out.println("Sales line update failed, cannot update stock / balance");
+                            return;
+                        } catch (WrongDataPathExeption e) {
+                            System.out.println("Balance is not updated, cannot find data file");
+                            return;
+                        }
+                    }
+                    case 2 -> {
+                        accountingService.updateSalesOrderLine(newOrder);
+                        return;
+                    }
+                    default -> System.out.println("Wrong choice, choose again");
+                }
+            }
+        } catch (WrongDataPathExeption | IOException e) {
+            System.out.println("Cannot create new order / data file doesn't exist");
         }
 
     }
 
     private static void findSalesDocumentByID(Scanner scanner) {
-        //TODO implement method
+        SalesOrder salesOrder = getSalesDocumentFromAccounting(scanner);
+        if (salesOrder == null) {
+            System.out.println("Sales order cannot be found");
+            return;
+        }
+        System.out.println("*****************************");
+        System.out.printf("Sales order Nr: %s\n", salesOrder.getOrderID());
+        double totalOrderSum = 0.0;
+        for (SalesOrderLine salesOrderLine : salesOrder.getSoldItems()) {
+            double lineAmount = salesOrderLine.getLineQuantity() * salesOrderLine.getUnitPrice();
+            System.out.printf("Item: %s, sold quantity: %s, sold unitPrice: %.2f, total line amount %.2f\n",
+                    salesOrderLine.getItemName(), salesOrderLine.getLineQuantity(), salesOrderLine.getUnitPrice(), lineAmount);
+            totalOrderSum += lineAmount;
+        }
+        System.out.println("**************");
+        System.out.printf("Total sales order amount: %.2f\n", totalOrderSum);
+        System.out.println("*****************************");
+    }
+
+    private static SalesOrder getSalesDocumentFromAccounting(Scanner scanner) {
+        System.out.println("Enter sales document number: ");
+        String requestedID = scanner.nextLine();
+
+        if (!requestedID.startsWith("SF ")) {
+            System.out.println("Sales order must begin with SF ");
+            return null;
+        }
+
+        return (SalesOrder) accountingService.getDocumentByID(requestedID);
+    }
+
+    private static ReturnOrder getReturnDocumentFromAccounting(Scanner scanner) {
+        System.out.println("Enter return document number: ");
+        String requestedID = scanner.nextLine();
+
+        if (!requestedID.startsWith("RE ")) {
+            System.out.println("Return order must begin with RE ");
+            return null;
+        }
+
+        return (ReturnOrder) accountingService.getDocumentByID(requestedID);
     }
 
     private static void createNewReturnOperation(Scanner scanner, User currentUser) {
-        //TODO implement method
+        System.out.println("Creating new Returns document");
+        SalesOrder salesOrder = getSalesDocumentFromAccounting(scanner);
+
+        if (salesOrder == null) {
+            System.out.println("Sales order doesn't exist, cannot make return order");
+            return;
+        }
+
+        try {
+            int returnOrderID = accountingService.getNewReturnDocumentNumber();
+            ReturnOrder returnOrder = new ReturnOrder(returnOrderID);
+            while (true) {
+                System.out.println("[1] - Add item to return order / [2] - Finish sales order");
+                switch (getIntegerFromScanner(scanner)) {
+                    case 1 -> {
+                        System.out.print("Enter sold item name: ");
+                        String itemName = scanner.nextLine();
+                        SoldItem soldItem = accountingService.getSoldItemByName(salesOrder, itemName);
+
+                        if (soldItem == null) {
+                            System.out.printf("Cannot find sold item by name: %s\n", itemName);
+                            return;
+                        }
+                        int quantity;
+                        while (true) {
+                            System.out.print("Enter quantity for return: ");
+                            quantity = getIntegerFromScanner(scanner);
+                            if (quantity == 0) {
+                                System.out.println("Quantity cannot be 0");
+                            } else if (quantity > soldItem.getCurrentQuantity()) {
+                                System.out.println("Cannot return more items, than you bought");
+                            } else {
+                                break;
+                            }
+                        }
+
+                        try {
+                            ReturnOrderLine returnOrderLine = new ReturnOrderLine(returnOrderID, itemName, quantity, soldItem.getSalePrice(), currentUser.getUsername());
+                            accountingService.updateBalance(returnOrderLine);
+                            warehouseService.updateWarehouseStock(soldItem, quantity);
+                            accountingService.updateSalesOrders(salesOrder, soldItem, quantity);
+                            accountingService.updateReturnRecords(returnOrderID, soldItem, quantity, currentUser.getUsername());
+                            returnOrder.addSalesOrderLineToOrder(returnOrderLine);
+                        } catch (NegativeBalanceException e) {
+                            System.out.println(e.getMessage());
+                        } catch (IOException e) {
+                            System.out.println("Return line update failed, cannot update stock / balance");
+                            return;
+                        } catch (WrongDataPathExeption e) {
+                            System.out.println("Balance is not updated, cannot find data file");
+                            return;
+                        } catch (ItemIsNotInWarehouseExeption e) {
+                            System.out.println("Can't return item, warehouse data file is empty");
+                        }
+                    }
+                    case 2 -> {
+                        accountingService.updateReturnOrderLine(returnOrder);
+
+                        return;
+                    }
+                    default -> System.out.println("Wrong choice, choose again");
+                }
+            }
+        } catch (WrongDataPathExeption | IOException e) {
+            System.out.println("Cannot create new return order / data file doesn't exist");
+        }
     }
 
     private static void findReturnDocumentByID(Scanner scanner) {
-        //TODO implement method
+        ReturnOrder returnOrder = getReturnDocumentFromAccounting(scanner);
+        if (returnOrder == null) {
+            System.out.println("Return order cannot be found");
+            return;
+        }
+        System.out.println("*****************************");
+        System.out.printf("Return order Nr: %s\n", returnOrder.getOrderID());
+        double totalOrderSum = 0.0;
+        for (ReturnOrderLine returnOrderLine : returnOrder.getReturnItems()) {
+            double lineAmount = returnOrderLine.getLineQuantity() * returnOrderLine.getUnitPrice();
+            System.out.printf("Item: %s, returned quantity: %s, returned unitPrice: %.2f, total line amount %.2f\n",
+                    returnOrderLine.getItemName(), returnOrderLine.getLineQuantity(), returnOrderLine.getUnitPrice(), lineAmount);
+            totalOrderSum += lineAmount;
+        }
+        System.out.println("**************");
+        System.out.printf("Total return order amount: %.2f\n", totalOrderSum);
+        System.out.println("*****************************");
     }
 
     private static void createPurchaseOrderToWarehouse(Scanner scanner) {
-        int purchaseNr;
         try {
-            purchaseNr = warehouseService.getNewPurchaseOrderNumber();
+            int purchaseNr = warehouseService.getNewPurchaseOrderNumber();
+            System.out.printf("Creating purchase order Nr.: %d\n", purchaseNr);
+            System.out.println("***********************");
+            PurchaseOrder purchaseOrder = new PurchaseOrder(purchaseNr);
+            while (true) {
+                System.out.println("[1] - Add item to purchase order / [2] - Finish order");
+                switch (getIntegerFromScanner(scanner)) {
+                    case 1 -> {
+                        System.out.print("Enter item name: ");
+                        String itemName = scanner.nextLine();
+                        double purchasePrice = getPurchasePriceFromScanner(scanner);
+                        int purchaseQuantity = getQuantityFromScanner(scanner);
+                        Item item = new Item(itemName, purchasePrice, purchaseQuantity);
+                        PurchaseOrderLine purchaseOrderLine = new PurchaseOrderLine(purchaseNr, item);
+                        try {
+                            accountingService.updateBalance(purchaseOrderLine);
+                            warehouseService.addItemToPurchaseOrder(purchaseOrderLine);
+                            purchaseOrder.addPurchaseOrderLinesToOrder(purchaseOrderLine);
+                            System.out.printf("Item %s was successfully added to order %d\n", itemName, purchaseNr);
+                        } catch (NegativeBalanceException e) {
+                            System.out.println(e.getMessage());
+                        } catch (IOException e) {
+                            System.out.printf("Item %s was not added, wrong data file location\n", itemName);
+                        }
+                    }
+                    case 2 -> {
+                        return;
+                    }
+                    default -> System.out.println("Wrong choice, choose again");
+                }
+            }
+
         } catch (IOException | WrongDataPathExeption e) {
             System.out.println(e.getMessage());
-            return;
         }
-        System.out.printf("Creating purchase order Nr.: %d\n", purchaseNr);
-        System.out.println("***********************");
-        while (true){
-            System.out.println("[1] - Add item to purchase order / [2] - Finish order");
-            switch (getIntegerFromScanner(scanner)){
-                case 1 ->{
-                    System.out.print("Enter item name: ");
-                    String itemName = scanner.nextLine();
-                    double purchasePrice = getPurchasePriceFromScanner(scanner);
-                    int purchaseQuantity = getQuantityFromScanner(scanner);
-                    Item item = new Item(itemName, purchasePrice, purchaseQuantity);
-                    PurchaseOrder purchaseOrder = new PurchaseOrder(purchaseNr, item);
-                    try {
-                        warehouseService.addItemToPurchaseOrder(purchaseOrder);
-                        System.out.printf("Item %s was successfully added to order %d\n", itemName, purchaseNr);
-                    } catch (IOException e) {
-                        System.out.printf("Item %s was not added, wrong data file location\n", itemName);
-                    }
-                }
-                case 2 -> {
-                    return;
-                }
-                default -> System.out.println("Wrong choice, choose again");
-            }
-        }
+
     }
 
-    public static void receiveGoodsToWarehouse(Scanner scanner){
+    public static void receiveGoodsToWarehouse(Scanner scanner) {
         int purchaseNr = 0;
         do {
             System.out.print("Enter goods purchase order nr: ");
             String input = scanner.nextLine();
             try {
                 purchaseNr = Integer.parseInt(input);
-            } catch (NumberFormatException e){
-                System.out.println("Wrong input, try agaim");
+            } catch (NumberFormatException e) {
+                System.out.println("Wrong input, try again");
             }
-            if(purchaseNr <= 0 ){
+            if (purchaseNr <= 0) {
                 System.out.println("Order number cannot be 0");
             } else {
                 break;
@@ -427,13 +574,24 @@ public class Main {
             warehouseService.receiveGoods(purchaseNr);
             System.out.println("Goods successfully added to warehouse stock");
             System.out.println("**********************");
-        } catch (PurchaseOrderDoesNotExistExeption | IOException e){
+        } catch (PurchaseOrderDoesNotExistExeption | IOException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public static void showWarehouseStock(){
+    public static void showWarehouseStock() {
+        ArrayList<Item> stock = warehouseService.getAllWarehouseItems();
 
+        if (stock == null) {
+            System.out.println("Warehouse is empty");
+            return;
+        }
+
+        for (Item item : stock) {
+            System.out.println("**********");
+            System.out.printf("Item: %s, total stock: %d\n", item.getItemName(), item.getCurrentQuantity());
+        }
+        System.out.println("**********");
     }
 
     private static double getPurchasePriceFromScanner(Scanner scanner) {
@@ -442,25 +600,25 @@ public class Main {
                 System.out.print("Enter item purchase price: ");
                 String purchasePriceString = scanner.nextLine();
                 double purchasePrice = Double.parseDouble(purchasePriceString);
-                if(purchasePrice > 0){
+                if (purchasePrice > 0) {
                     return purchasePrice;
                 }
-            } catch (NumberFormatException e){
+            } catch (NumberFormatException e) {
                 System.out.println("Wrong input, try again");
             }
         } while (true);
     }
 
-    private static int getQuantityFromScanner(Scanner scanner){
+    private static int getQuantityFromScanner(Scanner scanner) {
         do {
             try {
                 System.out.print("Enter item purchase quantity: ");
                 String purchaseQuantityString = scanner.nextLine();
                 int quantity = Integer.parseInt(purchaseQuantityString);
-                if(quantity > 0){
+                if (quantity > 0) {
                     return quantity;
                 }
-            } catch (NumberFormatException e){
+            } catch (NumberFormatException e) {
                 System.out.println("Wrong input, try again");
             }
         } while (true);
@@ -476,8 +634,6 @@ public class Main {
             } catch (ItemIsNotInWarehouseExeption e) {
                 System.out.println(e.getMessage());
             }
-
-            System.out.println("Wrong item name, try again!!");
         }
     }
 

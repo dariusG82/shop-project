@@ -1,0 +1,14 @@
+1
+Tusinukas
+0.25
+0.39
+300
+true
+
+2
+Trintukas
+0.25
+0.29
+50
+true
+
