@@ -333,6 +333,20 @@ public class DataFromFileService implements DataManagement {
         }
     }
 
+    public void saveWarehouseStock(ArrayList<Item> items) throws IOException {
+        PrintWriter printWriter = new PrintWriter(new FileWriter(WAREHOUSE_DATA_PATH));
+
+        for (Item item : items) {
+            printWriter.println(item.getItemName());
+            printWriter.println(item.getPurchasePrice());
+            printWriter.println(item.getSalePrice());
+            printWriter.println(item.getCurrentQuantity());
+            printWriter.println();
+        }
+
+        printWriter.close();
+    }
+
     public ArrayList<PurchaseOrderLine> getPurchaseOrderLines() {
         try {
             Scanner scanner = new Scanner(new File(PURCHASE_ORDERS_PATH));

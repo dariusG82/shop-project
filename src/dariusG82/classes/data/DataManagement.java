@@ -40,6 +40,8 @@ public interface DataManagement {
 
     ArrayList<Item> getAllWarehouseItems();
 
+    void saveWarehouseStock(ArrayList<Item> items) throws IOException;
+
     ArrayList<PurchaseOrderLine> getPurchaseOrderLines();
 
     void updatedOrderList(ArrayList<PurchaseOrderLine> orderLines) throws IOException;

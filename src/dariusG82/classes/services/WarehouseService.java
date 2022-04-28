@@ -7,9 +7,7 @@ import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
 import dariusG82.classes.warehouse.Item;
 
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public class WarehouseService extends Service {
@@ -48,7 +46,7 @@ public class WarehouseService extends Service {
         ArrayList<Item> uniqueItems = getUniqueItemsList(allItems);
 
         dataService.updatedOrderList(updatedOrders);
-        saveWarehouseDatabase(uniqueItems);
+        dataService.saveWarehouseStock(uniqueItems);
     }
 
     public Item getItemFromWarehouse(String itemName) throws ItemIsNotInWarehouseExeption {
@@ -79,7 +77,7 @@ public class WarehouseService extends Service {
                 item.updateQuantity(quantity);
             }
         }
-        saveWarehouseDatabase(allItems);
+        dataService.saveWarehouseStock(allItems);
     }
 
     private ArrayList<Item> getUniqueItemsList(ArrayList<Item> items) {
@@ -96,17 +94,5 @@ public class WarehouseService extends Service {
         return uniqueItems;
     }
 
-    private void saveWarehouseDatabase(ArrayList<Item> items) throws IOException {
-        PrintWriter printWriter = new PrintWriter(new FileWriter(WAREHOUSE_DATA_PATH));
 
-        for (Item item : items) {
-            printWriter.println(item.getItemName());
-            printWriter.println(item.getPurchasePrice());
-            printWriter.println(item.getSalePrice());
-            printWriter.println(item.getCurrentQuantity());
-            printWriter.println();
-        }
-
-        printWriter.close();
-    }
 }

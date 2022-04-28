@@ -14,6 +14,9 @@ import java.util.ArrayList;
 
 public class AccountingService extends Service {
 
+    public final String RETURN_ORDERS_PATH = "src/dariusG82/classes/data/orders/returnOrderList";
+    public final String SALES_ORDERS_PATH = "src/dariusG82/classes/data/orders/salesOrderList.txt";
+
     public void updateCashRecords(CashRecord cashRecord) throws IOException {
         ArrayList<CashRecord> allCashRecords = dataService.getAllCashRecords();
 

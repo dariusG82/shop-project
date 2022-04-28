@@ -8,17 +8,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 
 public class Service {
-
     protected DataManagement dataService = new DataFromFileService();
-    public final String PURCHASE_ORDERS_PATH = "src/dariusG82/classes/data/orders/purchaseOrderList.txt";
-    public final String RETURN_ORDERS_PATH = "src/dariusG82/classes/data/orders/returnOrderList";
-    public final String SALES_ORDERS_PATH = "src/dariusG82/classes/data/orders/salesOrderList.txt";
-
-    public final String CLIENT_PATH = "src/dariusG82/classes/data/clients.txt";
-    public final String DAILY_CASH_JOURNALS_PATH = "src/dariusG82/classes/data/dailyCashJournals.txt";
-    public final String USERS_DATA_PATH = "src/dariusG82/classes/data/users.txt";
-    public final String WAREHOUSE_DATA_PATH = "src/dariusG82/classes/data/warehouse.txt";
-
     public static final String CURRENT_DATE = "0|";
     public static final String PURCHASE_ORDER_NR_INFO = "1|";
     public static final String SALES_ORDER_NR_INFO = "2|";
