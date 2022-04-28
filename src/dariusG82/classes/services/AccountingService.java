@@ -3,7 +3,6 @@ package dariusG82.classes.services;
 import dariusG82.classes.accounting.DailyReport;
 import dariusG82.classes.accounting.finance.CashOperation;
 import dariusG82.classes.accounting.finance.CashRecord;
-import dariusG82.classes.accounting.finance.SalesCashRecord;
 import dariusG82.classes.accounting.orders.*;
 import dariusG82.classes.custom_exeptions.NegativeBalanceException;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
@@ -138,16 +137,17 @@ public class AccountingService extends Service {
 
     public ArrayList<CashRecord> getDailySaleDocuments(LocalDate date, CashOperation cashOperation) {
         ArrayList<CashRecord> allCashRecords = dataService.getAllCashRecords();
-        ArrayList<CashRecord> dailyRecords = new ArrayList<>();
+        ArrayList<CashRecord> cashRecords = new ArrayList<>();
         if (allCashRecords == null) {
             return null;
         }
         for (CashRecord cashRecord : allCashRecords) {
             if (cashRecord.getOperation().equals(cashOperation) && cashRecord.getDate().equals(date)) {
-                dailyRecords.add(cashRecord);
+                    cashRecords.add(cashRecord);
             }
         }
-        return dailyRecords;
+
+         return cashRecords;
     }
 
     public int getNewDocumentNumber(String orderType) throws IOException, WrongDataPathExeption {
@@ -160,15 +160,15 @@ public class AccountingService extends Service {
         }
     }
 
-    public ArrayList<SalesCashRecord> getSalesReportBySalesperson(String username, int year, int month) {
-        ArrayList<SalesCashRecord> recordsBySeller = getSalesRecordsForSeller(username);
+    public ArrayList<CashRecord> getSalesReportBySalesperson(String username, int year, int month) {
+        ArrayList<CashRecord> recordsBySeller = getSalesRecordsForSeller(username);
 
         return getSalesRecordsForMonth(recordsBySeller, year, month);
     }
 
-    public double getTotalSalesByReport(ArrayList<SalesCashRecord> records) {
+    public double getTotalSalesByReport(ArrayList<CashRecord> records) {
         double totalSales = 0.0;
-        for (SalesCashRecord record : records) {
+        for (CashRecord record : records) {
             totalSales += record.getAmount();
         }
         return totalSales;
@@ -281,30 +281,30 @@ public class AccountingService extends Service {
         return cashSum;
     }
 
-    private ArrayList<SalesCashRecord> getSalesRecordsForSeller(String sellerUsername) {
+    private ArrayList<CashRecord> getSalesRecordsForSeller(String sellerUsername) {
         ArrayList<CashRecord> allRecords = dataService.getAllCashRecords();
-        ArrayList<SalesCashRecord> salesCashRecords = new ArrayList<>();
+        ArrayList<CashRecord> salesCashRecords = new ArrayList<>();
 
         if (allRecords == null) {
             return new ArrayList<>();
         }
 
         for (CashRecord record : allRecords) {
-            if (record instanceof SalesCashRecord salesRecord && record.getSellerUsername().equals(sellerUsername)) {
-                salesCashRecords.add(salesRecord);
+            if (record.getRecordID().startsWith("SF ") && record.getSellerUsername().equals(sellerUsername)) {
+                salesCashRecords.add(record);
             }
         }
 
         return salesCashRecords;
     }
 
-    private ArrayList<SalesCashRecord> getSalesRecordsForMonth(ArrayList<SalesCashRecord> records, int year,
+    private ArrayList<CashRecord> getSalesRecordsForMonth(ArrayList<CashRecord> records, int year,
                                                                int month) {
-        ArrayList<SalesCashRecord> recordsForMonth = new ArrayList<>();
+        ArrayList<CashRecord> recordsForMonth = new ArrayList<>();
 
-        for (SalesCashRecord salesCashRecord : records) {
-            if (salesCashRecord.getDate().getYear() == year && salesCashRecord.getDate().getMonthValue() == month) {
-                recordsForMonth.add(salesCashRecord);
+        for (CashRecord cashRecord : records) {
+            if (cashRecord.getDate().getYear() == year && cashRecord.getDate().getMonthValue() == month) {
+                recordsForMonth.add(cashRecord);
             }
         }
         return recordsForMonth;

@@ -203,7 +203,7 @@ public class Main {
     }
 
     private static void getBalanceForADay(Scanner scanner) {
-        System.out.println("Enter the day for balance - format yyyy-mm-dd");
+        System.out.print("Enter the day for balance - format yyyy-mm-dd: ");
         while (true) {
             try {
                 LocalDate date = getLocalDate(scanner);
@@ -222,7 +222,7 @@ public class Main {
     }
 
     private static void getBalanceForAMonth(Scanner scanner) {
-        System.out.println("Enter the month for balance - format yyyy-mm");
+        System.out.print("Enter the month for balance - format yyyy-mm: ");
         while (true) {
             try {
                 LocalDate date = getLocalDate(scanner);
@@ -240,18 +240,20 @@ public class Main {
     }
 
     private static void getSalesDocumentsByDay(Scanner scanner) {
-
-        System.out.println("Enter the day for sales documents balance - format yyyy-mm-dd");
+        System.out.print("Enter the day for sales documents balance - format yyyy-mm-dd: ");
         while (true) {
             try {
                 LocalDate date = getLocalDate(scanner);
                 ArrayList<CashRecord> salesForDay = accountingService.getDailySaleDocuments(date, CashOperation.DAILY_INCOME);
+                if (salesForDay.size() == 0) {
+                    System.out.printf("There is no sales document for %s day\n", date);
+                    return;
+                }
                 System.out.printf("Sales documents for %s day is:\n", date);
+                System.out.println("*******************");
                 for (CashRecord cashRecord : salesForDay) {
-                    SalesCashRecord salesCashRecord = (SalesCashRecord) cashRecord;
-                    System.out.println("*******************");
                     System.out.printf("Sales document id: %s, amount = %.2f\n",
-                            salesCashRecord.getRecordID(), salesCashRecord.getAmount());
+                            cashRecord.getRecordID(), cashRecord.getAmount());
                     System.out.println("*******************");
                 }
                 return;
@@ -264,17 +266,16 @@ public class Main {
     }
 
     private static void getReturnsDocumentsByDay(Scanner scanner) {
-        System.out.println("Enter the day for returns documents balance - format yyyy-mm-dd");
+        System.out.print("Enter the day for returns documents balance - format yyyy-mm-dd: ");
         while (true) {
             try {
                 LocalDate date = getLocalDate(scanner);
                 ArrayList<CashRecord> salesForDay = accountingService.getDailySaleDocuments(date, CashOperation.DAILY_EXPENSE);
                 System.out.printf("Return documents for %s is:\n", date);
+                System.out.println("*******************");
                 for (CashRecord cashRecord : salesForDay) {
-                    ReturnCashRecord returnCashRecord = (ReturnCashRecord) cashRecord;
-                    System.out.println("*******************");
                     System.out.printf("Return document id: %s, amount = %.2f\n",
-                            returnCashRecord.getRecordID(), returnCashRecord.getAmount());
+                            cashRecord.getRecordID(), cashRecord.getAmount());
                     System.out.println("*******************");
                 }
                 return;
@@ -287,25 +288,30 @@ public class Main {
     }
 
     private static void getSalesBySellerByMonth(Scanner scanner) {
-        System.out.print("Enter salesman username to get report:");
+        System.out.print("Enter salesman username to get report: ");
         String sellerUsername = scanner.nextLine();
+        User user = adminService.getUserByUsername(sellerUsername);
+        if(user == null){
+            System.out.printf("User with username %s does not exist\n", sellerUsername);
+            return;
+        }
         while (true) {
             try {
-                System.out.print("Enter month for sales report - format yyyy-mm");
+                System.out.print("Enter month for sales report - format yyyy-mm: ");
                 LocalDate date = getLocalDate(scanner);
-                ArrayList<SalesCashRecord> userSales = accountingService.getSalesReportBySalesperson(sellerUsername, date.getYear(), date.getMonthValue());
+                ArrayList<CashRecord> userSales = accountingService.getSalesReportBySalesperson(sellerUsername, date.getYear(), date.getMonthValue());
                 if (userSales.size() == 0) {
                     System.out.printf("No sales data found for %s user for %s %s\n",
                             sellerUsername, date.getYear(), date.getMonth());
                     return;
                 }
-                for (SalesCashRecord record : userSales) {
+                for (CashRecord record : userSales) {
                     System.out.printf("Date: %s, document id: %s, amount: %.2f\n",
                             record.getDate(), record.getRecordID(), record.getAmount());
                 }
                 System.out.println("*******************");
-                System.out.printf("Total %s sales for %s %s is: %.2f\n",
-                        sellerUsername, date.getYear(), date.getMonth(), accountingService.getTotalSalesByReport(userSales));
+                System.out.printf("Total %s %s sales for %s %s is: %.2f\n",
+                        user.getName(), user.getSurname(), date.getYear(), date.getMonth(), accountingService.getTotalSalesByReport(userSales));
                 System.out.println("*******************");
                 return;
             } catch (NumberFormatException e) {

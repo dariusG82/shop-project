@@ -1,10 +1,10 @@
 0|CurrentDate-2022-04-28
 
-1|PurchaseOrdersNr-0
+1|PurchaseOrdersNr-2
 
-2|SalesOrderNumber-7
+2|SalesOrderNumber-8
 
-3|ReturnOrderNr-13
+3|ReturnOrderNr-14
 
-4|CurrentBalance-10064.6
+4|CurrentBalance-7877.6
 

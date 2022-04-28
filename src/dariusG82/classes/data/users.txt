@@ -4,12 +4,6 @@ DarGov
 konjakas
 IT_SUPPORT
 
-Neringa
-Govediene
-NerGov
-saulute
-SALESPERSON
-
 Saulius
 Sauliukas
 SauSau
@@ -33,4 +27,10 @@ karina
 KriKri
 Kristute
 SALESPERSON
+
+Kata
+Zina
+Katazina
+password
+ACCOUNTING
 

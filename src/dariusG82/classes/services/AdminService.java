@@ -53,16 +53,24 @@ public class AdminService extends Service {
     }
 
     public User getUserByType(String username, String password, UserType type) throws UserNotFoundException {
+        User user = getUserByUsername(username);
+
+        if(user != null && user.getUserType().equals(type) && user.getPassword().equals(password)){
+            return user;
+        }
+
+        throw new UserNotFoundException();
+    }
+
+    public User getUserByUsername(String username){
         ArrayList<User> users = dataService.getAllUsers();
 
-        for (User user : users) {
-            if (user.getUserType().equals(type) &&
-                    user.getUsername().equals(username) &&
-                    user.getPassword().equals(password)) {
+        for(User user : users){
+            if(user.getUsername().equals(username)){
                 return user;
             }
         }
-        throw new UserNotFoundException();
+        return null;
     }
 
     public void updateCurrentDateInDataString(LocalDate currentDate) throws WrongDataPathExeption, IOException {

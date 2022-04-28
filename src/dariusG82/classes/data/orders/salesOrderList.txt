@@ -76,3 +76,15 @@ Trintukas
 0.29
 Saulius
 
+SF 8
+Tusinukas
+49
+0.39
+Saulius
+
+SF 8
+Trintukas
+2
+0.29
+Saulius
+
