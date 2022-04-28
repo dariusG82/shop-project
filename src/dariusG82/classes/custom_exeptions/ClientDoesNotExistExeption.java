@@ -1,8 +1,8 @@
 package dariusG82.classes.custom_exeptions;
 
-public class PartnerDoesNotExistExeption extends Exception{
+public class ClientDoesNotExistExeption extends Exception {
 
-    public PartnerDoesNotExistExeption(){
+    public ClientDoesNotExistExeption() {
         super("Business Partner you looking for do not exists in database");
     }
 }

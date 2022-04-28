@@ -1,10 +1,10 @@
 package dariusG82.classes.warehouse;
 
-public class SoldItem extends Item{
+public class ReturnedItem extends Item {
 
     private final String salesPersonUsername;
 
-    public SoldItem(String itemName, int soldQuantity, double salePrice, String salesPersonUsername){
+    public ReturnedItem(String itemName, int soldQuantity, double salePrice, String salesPersonUsername) {
         super(itemName);
         this.currentQuantity = soldQuantity;
         this.salePrice = salePrice;

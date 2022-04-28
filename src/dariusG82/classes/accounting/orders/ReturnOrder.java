@@ -11,20 +11,17 @@ public class ReturnOrder extends Order {
         this.returnItems = new ArrayList<>();
     }
 
-    public ReturnOrder(int orderID, ArrayList<ReturnOrderLine> soldItems) {
-        super(orderID);
-        this.returnItems = soldItems;
-    }
-    public ArrayList<ReturnOrderLine> getReturnItems() {
+    public ArrayList<ReturnOrderLine> getOrderItems() {
         return returnItems;
     }
 
     public void addSalesOrderLineToOrder(ReturnOrderLine returnOrderLine) {
         this.returnItems.add(returnOrderLine);
     }
+
     @Override
     public double getTotalOrderAmount() {
-        for (ReturnOrderLine returnOrderLine : returnItems){
+        for (ReturnOrderLine returnOrderLine : returnItems) {
             totalOrderAmount += returnOrderLine.getLineQuantity() * returnOrderLine.getUnitPrice();
         }
         return totalOrderAmount;

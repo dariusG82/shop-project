@@ -1,48 +1,28 @@
 package dariusG82.classes.services;
 
+import dariusG82.classes.accounting.DailyReport;
 import dariusG82.classes.accounting.finance.CashOperation;
 import dariusG82.classes.accounting.finance.CashRecord;
-import dariusG82.classes.accounting.finance.ReturnCashRecord;
 import dariusG82.classes.accounting.finance.SalesCashRecord;
 import dariusG82.classes.accounting.orders.*;
 import dariusG82.classes.custom_exeptions.NegativeBalanceException;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
-import dariusG82.classes.warehouse.Item;
-import dariusG82.classes.warehouse.SoldItem;
+import dariusG82.classes.warehouse.ReturnedItem;
 
-import java.io.*;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 public class AccountingService extends Service {
-    private final String path = "src/dariusG82/services/data/salesJournal.txt";
-    private final String saleOrdersPath = "src/dariusG82/services/data/orders/salesOrderList.txt";
-    private final String returnOrderPath = "src/dariusG82/services/data/orders/returnOrderList";
 
-    private final String SALES_ORDER_BEGINS = "SF ";
-    private final String RETURN_ORDER_BEGINS = "RE ";
+    public void updateCashRecords(CashRecord cashRecord) throws IOException {
+        ArrayList<CashRecord> allCashRecords = dataService.getAllCashRecords();
 
-    public void updateSalesRecords(int recordNr, Item item, int quantity, String username) throws IOException, WrongDataPathExeption {
-        ArrayList<CashRecord> allCashRecords = getAllRecords();
-
-        SalesCashRecord salesRecord = new SalesCashRecord(recordNr, LocalDate.now(), item.getSalePrice() * quantity, username);
-        allCashRecords.add(salesRecord);
-
-        ArrayList<CashRecord> uniqueRecords = sumCashRecordsByID(allCashRecords);
-
-        rewriteDailyBalance(uniqueRecords);
-    }
-
-    public void updateReturnRecords(int recordNr, SoldItem item, int quantity, String username) throws IOException, WrongDataPathExeption {
-        ArrayList<CashRecord> allCashRecords = getAllRecords();
-
-        ReturnCashRecord returnCashRecord = new ReturnCashRecord(recordNr, LocalDate.now(), item.getSalePrice() * quantity, username);
-        allCashRecords.add(returnCashRecord);
-
-        ArrayList<CashRecord> uniqueRecords = sumCashRecordsByID(allCashRecords);
-
-        rewriteDailyBalance(uniqueRecords);
+        if (allCashRecords != null) {
+            allCashRecords.add(cashRecord);
+            ArrayList<CashRecord> uniqueRecords = sumCashRecordsByID(allCashRecords);
+            dataService.rewriteDailyBalance(uniqueRecords);
+        }
     }
 
     public Order getDocumentByID(String id) {
@@ -51,289 +31,95 @@ public class AccountingService extends Service {
         int orderNr = Integer.parseInt(index);
 
         switch (documentBegins) {
-            case SALES_ORDER_BEGINS -> {
-                ArrayList<SalesOrderLine> salesOrderLines = getAllSalesOrdersLines();
-                SalesOrder salesOrder = new SalesOrder(orderNr);
-
-                for (SalesOrderLine salesOrderLine : salesOrderLines) {
-                    if (salesOrderLine.orderNr == orderNr) {
-                        salesOrder.getSoldItems().add(salesOrderLine);
-                    }
-                }
-
-                return salesOrder;
+            case "SF " -> {
+                return getOrder(SALES_ORDERS_PATH, orderNr);
             }
-            case RETURN_ORDER_BEGINS -> {
-                ArrayList<ReturnOrderLine> salesOrderLines = getAllReturnOrdersLines();
-                ReturnOrder returnOrder = new ReturnOrder(orderNr);
-
-                for (ReturnOrderLine returnOrderLine : salesOrderLines) {
-                    if (returnOrderLine.orderNr == orderNr) {
-                        returnOrder.getReturnItems().add(returnOrderLine);
-                    }
-                }
-
-                return returnOrder;
+            case "RE " -> {
+                return getOrder(RETURN_ORDERS_PATH, orderNr);
             }
         }
         return null;
     }
 
+    private Order getOrder(String orderDataPath, int orderNr) {
+        ArrayList<OrderLine> orderLines = dataService.getAllOrderLines(orderDataPath);
+        Order order = null;
+
+        if (orderDataPath.equals(SALES_ORDERS_PATH)) {
+            order = new SalesOrder(orderNr);
+        } else if (orderDataPath.equals(RETURN_ORDERS_PATH)) {
+            order = new ReturnOrder(orderNr);
+        }
+
+        if (orderLines == null || order == null) {
+            return null;
+        }
+
+        for (OrderLine orderLine : orderLines) {
+            if (orderLine.orderNr == orderNr) {
+                if (orderLine instanceof SalesOrderLine salesOrderLine && order instanceof SalesOrder) {
+                    ((SalesOrder) order).getOrderItems().add(salesOrderLine);
+                }
+                if (orderLine instanceof ReturnOrderLine returnOrderLine && order instanceof ReturnOrder) {
+                    ((ReturnOrder) order).getOrderItems().add(returnOrderLine);
+                }
+            }
+        }
+        return order;
+    }
+
     public void updateSalesOrderLine(SalesOrder salesOrder) throws WrongDataPathExeption, IOException {
-        ArrayList<SalesOrderLine> allSalesOrderLines = getAllSalesOrdersLines();
+        ArrayList<OrderLine> allSalesOrderLines = dataService.getAllOrderLines(SALES_ORDERS_PATH);
 
         if (allSalesOrderLines == null) {
             throw new WrongDataPathExeption();
         }
 
-        ArrayList<SalesOrderLine> orderLines = salesOrder.getSoldItems();
+        ArrayList<SalesOrderLine> orderLines = salesOrder.getOrderItems();
 
         allSalesOrderLines.addAll(orderLines);
 
-        rewriteSalesOrderLines(allSalesOrderLines);
+        dataService.rewriteOrderLines(allSalesOrderLines, SALES_ORDERS_PATH);
     }
 
-    public void updateReturnOrderLine(ReturnOrder returnOrder) throws WrongDataPathExeption, IOException {
-        ArrayList<ReturnOrderLine> allReturnOrdersLines = getAllReturnOrdersLines();
+    public void updateReturnOrderLines(ReturnOrder returnOrder) throws WrongDataPathExeption, IOException {
+        ArrayList<OrderLine> allReturnOrdersLines = dataService.getAllOrderLines(RETURN_ORDERS_PATH);
 
         if (allReturnOrdersLines == null) {
             throw new WrongDataPathExeption();
         }
 
-        ArrayList<ReturnOrderLine> orderLines = returnOrder.getReturnItems();
+        ArrayList<ReturnOrderLine> orderLines = returnOrder.getOrderItems();
 
         allReturnOrdersLines.addAll(orderLines);
 
-        rewriteReturnOrderLines(allReturnOrdersLines);
+        dataService.rewriteOrderLines(allReturnOrdersLines, RETURN_ORDERS_PATH);
     }
 
-    public void updateSalesOrders(SalesOrder salesOrder, SoldItem item, int quantity) throws WrongDataPathExeption, IOException {
-        ArrayList<SalesOrderLine> allSalesOrderLines = getAllSalesOrdersLines();
+    public void refreshSalesOrdersQuantity(SalesOrder salesOrder, ReturnedItem item, int quantity) throws WrongDataPathExeption, IOException {
+        ArrayList<OrderLine> allSalesOrderLines = dataService.getAllOrderLines(SALES_ORDERS_PATH);
 
         if (allSalesOrderLines == null) {
             throw new WrongDataPathExeption();
         }
 
-        for (SalesOrderLine salesOrderLine : allSalesOrderLines) {
+        for (OrderLine salesOrderLine : allSalesOrderLines) {
             if (salesOrderLine.getOrderNr() == salesOrder.getOrderID() && salesOrderLine.getItemName().equals(item.getItemName())) {
-                salesOrderLine.updateQuantity(quantity);
+                ((SalesOrderLine) salesOrderLine).updateQuantity(quantity);
             }
         }
-
-        rewriteSalesOrderLines(allSalesOrderLines);
+        dataService.rewriteOrderLines(allSalesOrderLines, SALES_ORDERS_PATH);
     }
 
-    public SoldItem getSoldItemByName(SalesOrder salesOrder, String itemName) {
-        ArrayList<SalesOrderLine> salesOrderLines = salesOrder.getSoldItems();
+    public ReturnedItem getSoldItemByName(SalesOrder salesOrder, String itemName) {
+        ArrayList<SalesOrderLine> salesOrderLines = salesOrder.getOrderItems();
 
         for (SalesOrderLine salesOrderLine : salesOrderLines) {
             if (salesOrderLine.getItemName().equals(itemName)) {
-                return new SoldItem(itemName, salesOrderLine.getLineQuantity(), salesOrderLine.getUnitPrice(), salesOrderLine.getSalesmanID());
+                return new ReturnedItem(itemName, salesOrderLine.getLineQuantity(), salesOrderLine.getUnitPrice(), salesOrderLine.getSalesmanID());
             }
         }
         return null;
-    }
-
-    public ArrayList<SalesOrderLine> getAllSalesOrdersLines() {
-        try {
-            Scanner scanner = new Scanner(new File(saleOrdersPath));
-            ArrayList<SalesOrderLine> orderLines = new ArrayList<>();
-
-            while (scanner.hasNext()) {
-                String orderIdString = scanner.nextLine();
-                String itemName = scanner.nextLine();
-                String quantityString = scanner.nextLine();
-                String unitPriceString = scanner.nextLine();
-                String salesmanID = scanner.nextLine();
-                scanner.nextLine();
-
-                int id = Integer.parseInt(orderIdString.substring(orderIdString.indexOf(" ") + 1));
-                int quantity = Integer.parseInt(quantityString);
-                double unitPrice = Double.parseDouble(unitPriceString);
-
-                SalesOrderLine orderLine = new SalesOrderLine(id, itemName, quantity, unitPrice, salesmanID);
-                orderLines.add(orderLine);
-            }
-            return orderLines;
-        } catch (FileNotFoundException e) {
-            return null;
-        }
-    }
-
-    public ArrayList<ReturnOrderLine> getAllReturnOrdersLines() {
-        try {
-            Scanner scanner = new Scanner(new File(returnOrderPath));
-            ArrayList<ReturnOrderLine> orderLines = new ArrayList<>();
-
-            while (scanner.hasNext()) {
-                String orderIdString = scanner.nextLine();
-                String itemName = scanner.nextLine();
-                String quantityString = scanner.nextLine();
-                String unitPriceString = scanner.nextLine();
-                String salesmanID = scanner.nextLine();
-                scanner.nextLine();
-
-                int id = Integer.parseInt(orderIdString.substring(orderIdString.indexOf(" ") + 1));
-                int quantity = Integer.parseInt(quantityString);
-                double unitPrice = Double.parseDouble(unitPriceString);
-
-                ReturnOrderLine orderLine = new ReturnOrderLine(id, itemName, quantity, unitPrice, salesmanID);
-                orderLines.add(orderLine);
-            }
-            return orderLines;
-        } catch (FileNotFoundException e) {
-            return null;
-        }
-    }
-
-    public ArrayList<CashRecord> getAllRecords() {
-        try {
-            Scanner scanner = new Scanner(new File(path));
-            ArrayList<CashRecord> cashRecords = new ArrayList<>();
-
-            while (scanner.hasNext()) {
-                String id = scanner.nextLine();
-                LocalDate operationDate = getOperationDate(scanner.nextLine());
-                CashOperation cashOperation = getCashOperation(scanner.nextLine());
-                double amount = getAmount(scanner.nextLine());
-                String sellerUsername = scanner.nextLine();
-                scanner.nextLine();
-
-                if (operationDate != null && cashOperation != null && amount != 0.0) {
-                    if (id.startsWith(SALES_ORDER_BEGINS)) {
-                        cashRecords.add(new SalesCashRecord(id, operationDate, amount, sellerUsername));
-                    }
-                    if (id.startsWith(RETURN_ORDER_BEGINS)) {
-                        cashRecords.add(new ReturnCashRecord(id, operationDate, amount, sellerUsername));
-                    }
-                }
-            }
-            return cashRecords;
-        } catch (FileNotFoundException e) {
-            return null;
-        }
-    }
-
-    private double getAmount(String input) {
-        try {
-            return Double.parseDouble(input);
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
-    }
-
-    private CashOperation getCashOperation(String input) {
-        try {
-            return CashOperation.valueOf(input);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-
-    private LocalDate getOperationDate(String input) {
-        try {
-            int year = Integer.parseInt(input.substring(0, 4));
-            int month = Integer.parseInt(input.substring(5, 7));
-            int day = Integer.parseInt(input.substring(8, 10));
-
-            return LocalDate.of(year, month, day);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private void rewriteSalesOrderLines(ArrayList<SalesOrderLine> salesOrderLines) throws IOException {
-        PrintWriter printWriter = new PrintWriter(new FileWriter(saleOrdersPath));
-
-        for (SalesOrderLine salesOrderLine : salesOrderLines) {
-
-            printWriter.println(SALES_ORDER_BEGINS + salesOrderLine.getOrderNr());
-            printWriter.println(salesOrderLine.getItemName());
-            printWriter.println(salesOrderLine.getLineQuantity());
-            printWriter.println(salesOrderLine.getUnitPrice());
-            printWriter.println(salesOrderLine.getSalesmanID());
-            printWriter.println();
-        }
-
-        printWriter.close();
-    }
-
-    private void rewriteReturnOrderLines(ArrayList<ReturnOrderLine> returnOrderLines) throws IOException {
-        PrintWriter printWriter = new PrintWriter(new FileWriter(returnOrderPath));
-
-        for (ReturnOrderLine returnOrderLine : returnOrderLines) {
-
-            printWriter.println(RETURN_ORDER_BEGINS + returnOrderLine.getOrderNr());
-            printWriter.println(returnOrderLine.getItemName());
-            printWriter.println(returnOrderLine.getLineQuantity());
-            printWriter.println(returnOrderLine.getUnitPrice());
-            printWriter.println(returnOrderLine.getSalesmanID());
-            printWriter.println();
-        }
-
-        printWriter.close();
-    }
-
-    private ArrayList<CashRecord> sumCashRecordsByID(ArrayList<CashRecord> oldRecords) {
-
-        ArrayList<SalesCashRecord> uniqueSalesRecords = new ArrayList<>();
-        ArrayList<ReturnCashRecord> uniqueReturnRecords = new ArrayList<>();
-
-        for (CashRecord record : oldRecords) {
-            boolean recordUpdated = false;
-            if (record instanceof SalesCashRecord salesCashRecord) {
-                String id = salesCashRecord.getRecordID();
-                String sellerId = salesCashRecord.getSellerUsername();
-                for (SalesCashRecord cashRecord : uniqueSalesRecords) {
-                    if (cashRecord.getRecordID().equals(id) && cashRecord.getSellerUsername().equals(sellerId)) {
-                        cashRecord.updateAmount(salesCashRecord.getAmount());
-                        recordUpdated = true;
-                    }
-                }
-                if (!recordUpdated) {
-                    uniqueSalesRecords.add(salesCashRecord);
-                }
-            } else if (record instanceof ReturnCashRecord returnCashRecord) {
-                String id = returnCashRecord.getRecordID();
-                String sellerId = returnCashRecord.getSellerUsername();
-                for (ReturnCashRecord cashRecord : uniqueReturnRecords) {
-                    if (cashRecord.getRecordID().equals(id) && cashRecord.getSellerUsername().equals(sellerId)) {
-                        cashRecord.updateAmount(record.getAmount());
-                        recordUpdated = true;
-                    }
-                }
-                if (!recordUpdated) {
-                    uniqueReturnRecords.add(returnCashRecord);
-                }
-            }
-        }
-
-        ArrayList<CashRecord> cashRecords = new ArrayList<>();
-        cashRecords.addAll(uniqueSalesRecords);
-        cashRecords.addAll(uniqueReturnRecords);
-
-        return cashRecords;
-    }
-
-    public void rewriteDailyBalance(ArrayList<CashRecord> cashRecords) throws IOException {
-        PrintWriter printWriter = new PrintWriter(new FileWriter(path));
-
-        for (CashRecord cashRecord : cashRecords) {
-            String orderID = "";
-            if (cashRecord instanceof SalesCashRecord) {
-                orderID = ((SalesCashRecord) cashRecord).getRecordID();
-            } else if (cashRecord instanceof ReturnCashRecord) {
-                orderID = ((ReturnCashRecord) cashRecord).getRecordID();
-            }
-            printWriter.println(orderID);
-            printWriter.println(cashRecord.getDate());
-            printWriter.println(cashRecord.getOperation());
-            printWriter.printf("%.2f\n", cashRecord.getAmount());
-            printWriter.println(cashRecord.getSellerUsername());
-            printWriter.println();
-        }
-
-        printWriter.close();
     }
 
     public double getDaysBalance(LocalDate date) {
@@ -351,8 +137,11 @@ public class AccountingService extends Service {
     }
 
     public ArrayList<CashRecord> getDailySaleDocuments(LocalDate date, CashOperation cashOperation) {
-        ArrayList<CashRecord> allCashRecords = getAllRecords();
+        ArrayList<CashRecord> allCashRecords = dataService.getAllCashRecords();
         ArrayList<CashRecord> dailyRecords = new ArrayList<>();
+        if (allCashRecords == null) {
+            return null;
+        }
         for (CashRecord cashRecord : allCashRecords) {
             if (cashRecord.getOperation().equals(cashOperation) && cashRecord.getDate().equals(date)) {
                 dailyRecords.add(cashRecord);
@@ -361,42 +150,9 @@ public class AccountingService extends Service {
         return dailyRecords;
     }
 
-    private double getCashOperationsByTypeAndMonth(CashOperation operation, int year, int month) {
-        ArrayList<CashRecord> allCashRecords = getAllRecords();
-        double cashSum = 0.0;
-        for (CashRecord cashRecord : allCashRecords) {
-            if (cashRecord.getOperation().equals(operation) &&
-                    cashRecord.getDate().getYear() == year &&
-                    cashRecord.getDate().getMonthValue() == month) {
-                cashSum += cashRecord.getAmount();
-            }
-        }
-        return cashSum;
-    }
+    public int getNewDocumentNumber(String orderType) throws IOException, WrongDataPathExeption {
+        int documentNr = getInfoFromDataString(orderType);
 
-    private double getCashOperationsByTypeAndDay(CashOperation operation, LocalDate date) {
-        ArrayList<CashRecord> allCashRecords = getAllRecords();
-        double cashSum = 0.0;
-        for (CashRecord cashRecord : allCashRecords) {
-            if (cashRecord.getOperation().equals(operation) && cashRecord.getDate().equals(date)) {
-                cashSum += cashRecord.getAmount();
-            }
-        }
-        return cashSum;
-    }
-
-    public int getNewSalesDocumentNumber() throws WrongDataPathExeption, IOException {
-        int documentNr = getInfoFromDataString(SALES_ORDER_NR_INFO);
-
-        if (documentNr > 0) {
-            return documentNr;
-        } else {
-            throw new WrongDataPathExeption();
-        }
-    }
-
-    public int getNewReturnDocumentNumber() throws WrongDataPathExeption, IOException {
-        int documentNr = getInfoFromDataString(RETURN_ORDER_NR_INFO);
         if (documentNr > 0) {
             return documentNr;
         } else {
@@ -418,9 +174,120 @@ public class AccountingService extends Service {
         return totalSales;
     }
 
+    public void updateBalance(OrderLine orderLine) throws WrongDataPathExeption, IOException, NegativeBalanceException {
+        ArrayList<String> dataList = dataService.getDataStrings();
+
+        if (dataList == null) {
+            throw new WrongDataPathExeption();
+        }
+
+        double newBalance = 0.0;
+
+        if (orderLine instanceof SalesOrderLine salesOrderLine) {
+            newBalance = getBalanceFromDataString() + salesOrderLine.getLineAmount();
+        } else if (orderLine instanceof ReturnOrderLine returnOrderLine) {
+            newBalance = getBalanceFromDataString() - returnOrderLine.getLineAmount();
+        } else if (orderLine instanceof PurchaseOrderLine purchaseOrderLine) {
+            newBalance = getBalanceFromDataString() - purchaseOrderLine.getLineAmount();
+        }
+
+        if (newBalance > 0) {
+            updateBalanceStringData(dataList, newBalance);
+            dataService.updateDataStrings(dataList);
+        } else {
+            throw new NegativeBalanceException();
+        }
+    }
+
+    public void countIncomeAndExpensesByDays() throws WrongDataPathExeption, IOException {
+        ArrayList<CashRecord> cashRecords = dataService.getAllCashRecords();
+        ArrayList<DailyReport> dailyReports = new ArrayList<>();
+
+        if (cashRecords == null) {
+            throw new WrongDataPathExeption();
+        }
+
+        CashRecord record = cashRecords.get(0);
+        DailyReport report = new DailyReport(record.getDate());
+        report.updateDailyReport(record.getOperation(), record.getAmount());
+        dailyReports.add(report);
+        int dailyReportIndex = 0;
+
+        for (int index = 1; index < cashRecords.size(); index++) {
+            CashRecord currentRecord = cashRecords.get(index);
+            DailyReport dailyReport = dailyReports.get(dailyReportIndex);
+            if (currentRecord.getDate().equals(dailyReport.getDate())) {
+                dailyReport.updateDailyReport(currentRecord.getOperation(), currentRecord.getAmount());
+            } else {
+                dailyReportIndex++;
+                dailyReport = new DailyReport(currentRecord.getDate());
+                dailyReport.updateDailyReport(currentRecord.getOperation(), currentRecord.getAmount());
+                dailyReports.add(dailyReport);
+            }
+        }
+
+        dataService.rewriteDailyReports(dailyReports);
+    }
+
+    private ArrayList<CashRecord> sumCashRecordsByID(ArrayList<CashRecord> oldRecords) {
+        ArrayList<CashRecord> cashRecords = new ArrayList<>();
+
+        for (CashRecord record : oldRecords) {
+            boolean recordUpdated = false;
+
+            String id = record.getRecordID();
+
+            for (CashRecord cashRecord : cashRecords) {
+                if (cashRecord.getRecordID().equals(id) && cashRecord.getSellerUsername().equals(record.getSellerUsername())) {
+                    cashRecord.updateAmount(record.getAmount());
+                    recordUpdated = true;
+                }
+            }
+            if (!recordUpdated) {
+                cashRecords.add(record);
+            }
+        }
+
+        return cashRecords;
+    }
+
+    private double getCashOperationsByTypeAndMonth(CashOperation operation, int year, int month) {
+        ArrayList<CashRecord> allCashRecords = dataService.getAllCashRecords();
+        double cashSum = 0.0;
+        if (allCashRecords == null) {
+            return cashSum;
+        }
+        for (CashRecord cashRecord : allCashRecords) {
+            if (cashRecord.getOperation().equals(operation) &&
+                    cashRecord.getDate().getYear() == year &&
+                    cashRecord.getDate().getMonthValue() == month) {
+                cashSum += cashRecord.getAmount();
+            }
+        }
+        return cashSum;
+    }
+
+    private double getCashOperationsByTypeAndDay(CashOperation operation, LocalDate date) {
+        ArrayList<CashRecord> allCashRecords = dataService.getAllCashRecords();
+        double cashSum = 0.0;
+        if (allCashRecords == null) {
+            return cashSum;
+        }
+        for (CashRecord cashRecord : allCashRecords) {
+            if (cashRecord.getOperation().equals(operation) && cashRecord.getDate().equals(date)) {
+                cashSum += cashRecord.getAmount();
+            }
+        }
+        return cashSum;
+    }
+
     private ArrayList<SalesCashRecord> getSalesRecordsForSeller(String sellerUsername) {
-        ArrayList<CashRecord> allRecords = getAllRecords();
+        ArrayList<CashRecord> allRecords = dataService.getAllCashRecords();
         ArrayList<SalesCashRecord> salesCashRecords = new ArrayList<>();
+
+        if (allRecords == null) {
+            return new ArrayList<>();
+        }
 
         for (CashRecord record : allRecords) {
             if (record instanceof SalesCashRecord salesRecord && record.getSellerUsername().equals(sellerUsername)) {
@@ -440,35 +307,7 @@ public class AccountingService extends Service {
                 recordsForMonth.add(salesCashRecord);
             }
         }
-
         return recordsForMonth;
-    }
-
-    public void updateBalance(OrderLine orderLine) throws
-            WrongDataPathExeption, IOException, NegativeBalanceException {
-        ArrayList<String> dataList = getDataStrings();
-
-        if (dataList == null) {
-            throw new WrongDataPathExeption();
-        }
-
-        double newBalance = 0.0;
-
-        if (orderLine instanceof SalesOrderLine salesOrderLine) {
-            newBalance = getBalanceFromDataString() + salesOrderLine.getLineAmount();
-        } else if (orderLine instanceof ReturnOrderLine returnOrderLine) {
-            newBalance = getBalanceFromDataString() - returnOrderLine.getLineAmount();
-        } else if (orderLine instanceof PurchaseOrderLine purchaseOrderLine) {
-            newBalance = getBalanceFromDataString() - purchaseOrderLine.getLineAmount();
-        }
-
-        if (newBalance > 0) {
-            updateBalanceStringData(dataList, newBalance);
-            updateDataStrings(dataList);
-        } else {
-            throw new NegativeBalanceException();
-        }
-
     }
 
     private void updateBalanceStringData(ArrayList<String> dataList, double newBalance) {

@@ -16,9 +16,10 @@ public class OrderLine {
         this.salesmanID = salesmanID;
     }
 
-    public double getLineAmount(){
+    public double getLineAmount() {
         return getLineQuantity() * getUnitPrice();
     }
+
     public int getOrderNr() {
         return orderNr;
     }

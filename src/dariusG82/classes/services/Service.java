@@ -1,49 +1,32 @@
 package dariusG82.classes.services;
 
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
+import dariusG82.classes.data.DataManagement;
 
-import java.io.*;
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 public class Service {
 
-    private static final String DATA_PATH = "src/dariusG82/services/data/systemData.txt";
-    protected static final String PURCHASE_ORDER_NR_INFO = "1|";
-    protected static final String SALES_ORDER_NR_INFO = "2|";
-    protected static final String RETURN_ORDER_NR_INFO = "3|";
-    protected static final String CURRENT_BALANCE = "4|";
+    protected DataManagement dataService = new DataFromFileService();
+    public final String PURCHASE_ORDERS_PATH = "src/dariusG82/classes/data/orders/purchaseOrderList.txt";
+    public final String RETURN_ORDERS_PATH = "src/dariusG82/classes/data/orders/returnOrderList";
+    public final String SALES_ORDERS_PATH = "src/dariusG82/classes/data/orders/salesOrderList.txt";
 
-    protected ArrayList<String> getDataStrings() {
-        try {
-            Scanner scanner = new Scanner(new File(DATA_PATH));
-            ArrayList<String> dataList = new ArrayList<>();
+    public final String CLIENT_PATH = "src/dariusG82/classes/data/clients.txt";
+    public final String DAILY_CASH_JOURNALS_PATH = "src/dariusG82/classes/data/dailyCashJournals.txt";
+    public final String USERS_DATA_PATH = "src/dariusG82/classes/data/users.txt";
+    public final String WAREHOUSE_DATA_PATH = "src/dariusG82/classes/data/warehouse.txt";
 
-            while (scanner.hasNext()) {
-                String data = scanner.nextLine();
-                scanner.nextLine();
-                dataList.add(data);
-            }
-
-            return dataList;
-        } catch (FileNotFoundException e) {
-            return null;
-        }
-    }
-
-    protected void updateDataStrings(ArrayList<String> updatedDataStrings) throws IOException {
-        PrintWriter printWriter = new PrintWriter(new FileWriter(DATA_PATH));
-
-        for (String dataString : updatedDataStrings) {
-            printWriter.println(dataString);
-            printWriter.println();
-        }
-
-        printWriter.close();
-    }
+    public static final String CURRENT_DATE = "0|";
+    public static final String PURCHASE_ORDER_NR_INFO = "1|";
+    public static final String SALES_ORDER_NR_INFO = "2|";
+    public static final String RETURN_ORDER_NR_INFO = "3|";
+    public static final String CURRENT_BALANCE = "4|";
 
     protected int getInfoFromDataString(String infoSection) throws IOException, WrongDataPathExeption {
-        ArrayList<String> dataList = getDataStrings();
+        ArrayList<String> dataList = dataService.getDataStrings();
 
         if (dataList == null) {
             throw new WrongDataPathExeption();
@@ -75,16 +58,16 @@ public class Service {
     }
 
     protected double getBalanceFromDataString() throws WrongDataPathExeption {
-        ArrayList<String> dataList = getDataStrings();
+        ArrayList<String> dataList = dataService.getDataStrings();
 
         if (dataList == null) {
             throw new WrongDataPathExeption();
         }
 
         for (String data : dataList) {
-            if(data.startsWith(CURRENT_BALANCE)){
+            if (data.startsWith(CURRENT_BALANCE)) {
                 Double balance = getBalance(data);
-                if(balance != null) {
+                if (balance != null) {
                     return balance;
                 }
             }
@@ -92,7 +75,21 @@ public class Service {
         return 0.0;
     }
 
+    public LocalDate getLoginDate() throws WrongDataPathExeption {
+        ArrayList<String> datalist = dataService.getDataStrings();
 
+        if (datalist == null) {
+            throw new WrongDataPathExeption();
+        }
+
+        for (String data : datalist) {
+            if (data.startsWith(CURRENT_DATE)) {
+                String dateTime = data.substring(data.indexOf("-") + 1);
+                return LocalDate.parse(dateTime);
+            }
+        }
+        return null;
+    }
 
     private Integer getOrderNr(ArrayList<String> dataList, String infoSection, String data) throws IOException {
         if (data.startsWith(infoSection)) {
@@ -101,7 +98,7 @@ public class Service {
             int index = dataList.indexOf(data);
             String newString = data.substring(0, data.indexOf("-") + 1) + ++newOrderNumber;
             dataList.set(index, newString);
-            updateDataStrings(dataList);
+            dataService.updateDataStrings(dataList);
             return newOrderNumber;
         }
         return null;
@@ -113,5 +110,9 @@ public class Service {
             return Double.parseDouble(purchaseOrderNumberString);
         }
         return null;
+    }
+
+    public DataManagement getDataService() {
+        return dataService;
     }
 }

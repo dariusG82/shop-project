@@ -1,8 +1,8 @@
 package dariusG82.classes.custom_exeptions;
 
-public class UserNotFoundException  extends Exception{
+public class UserNotFoundException extends Exception {
 
-    public UserNotFoundException(){
+    public UserNotFoundException() {
         super("User cannot be found");
     }
 }

@@ -10,6 +10,11 @@ public class PurchaseOrder extends Order {
         super(orderNr);
     }
 
+    @Override
+    public ArrayList<PurchaseOrderLine> getOrderItems() {
+        return null;
+    }
+
     public void addPurchaseOrderLinesToOrder(PurchaseOrderLine purchaseOrderLine) {
         this.orderedItems.add(purchaseOrderLine);
     }

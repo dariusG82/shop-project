@@ -6,7 +6,7 @@ public class SalesOrderLine extends OrderLine {
         super(orderNr, itemName, lineQuantity, unitPrice, salesmanID);
     }
 
-    public void updateQuantity(int returnedQuantity){
+    public void updateQuantity(int returnedQuantity) {
         this.lineQuantity -= returnedQuantity;
     }
 }

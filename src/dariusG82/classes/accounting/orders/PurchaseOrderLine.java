@@ -7,7 +7,7 @@ public class PurchaseOrderLine extends OrderLine {
     boolean isFinished;
     protected double salePrice;
 
-    public PurchaseOrderLine(int orderNr, Item item){
+    public PurchaseOrderLine(int orderNr, Item item) {
         super(orderNr, item.getItemName(), item.getCurrentQuantity(), item.getPurchasePrice(), null);
         this.salePrice = item.getSalePrice();
         this.isFinished = false;

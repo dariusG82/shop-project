@@ -1,5 +1,7 @@
 package dariusG82.classes.accounting.orders;
 
+import java.util.ArrayList;
+
 public abstract class Order {
 
     private final int orderID;
@@ -13,4 +15,6 @@ public abstract class Order {
     }
 
     public abstract double getTotalOrderAmount();
+
+    public abstract ArrayList<? extends OrderLine> getOrderItems();
 }

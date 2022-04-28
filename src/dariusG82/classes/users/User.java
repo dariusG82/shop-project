@@ -1,4 +1,4 @@
-package dariusG82.classes.admin.users;
+package dariusG82.classes.users;
 
 public class User {
 

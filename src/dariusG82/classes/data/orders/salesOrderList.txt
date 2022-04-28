@@ -1,6 +1,6 @@
 SF 1
 Tusinukas
-10
+5
 0.39
 Saulius
 
@@ -12,7 +12,67 @@ Saulius
 
 SF 2
 Tusinukas
-15
+10
 0.39
 Neringa
+
+SF 3
+Tusinukas
+15
+0.39
+Saulius
+
+SF 3
+Trintukas
+25
+0.29
+Saulius
+
+SF 4
+Tusinukas
+25
+0.39
+Saulius
+
+SF 4
+Trintukas
+18
+0.29
+Saulius
+
+SF 5
+Tusinukas
+20
+0.39
+Saulius
+
+SF 5
+Trintukas
+25
+0.29
+Saulius
+
+SF 6
+Tusinukas
+14
+0.39
+Saulius
+
+SF 6
+Trintukas
+13
+0.29
+Saulius
+
+SF 7
+Tusinukas
+15
+0.39
+Saulius
+
+SF 7
+Trintukas
+16
+0.29
+Saulius
 

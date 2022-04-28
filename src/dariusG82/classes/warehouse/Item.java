@@ -9,7 +9,7 @@ public class Item {
     protected double salePrice;
     protected int currentQuantity;
 
-    public Item(String itemName){
+    public Item(String itemName) {
         this.itemName = itemName;
         this.purchasePrice = 0.0;
         this.salePrice = 0.0;
@@ -46,13 +46,13 @@ public class Item {
         return currentQuantity;
     }
 
-    public void updateQuantity(int amount){
+    public void updateQuantity(int amount) {
         currentQuantity += amount;
     }
 
     private double setSalePrice() {
         Random random = new Random();
-        return Math.round((getPurchasePrice() * random.nextDouble(1.15, 1.6))*100.0)/100.0;
+        return Math.round((getPurchasePrice() * random.nextDouble(1.15, 1.6)) * 100.0) / 100.0;
     }
 
     @Override
