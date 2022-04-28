@@ -40,3 +40,10 @@ Tusinukas
 1
 true
 
+3
+Krabas
+20.0
+30.26
+30
+true
+
