@@ -3,11 +3,12 @@ package dariusG82.classes.accounting.orders;
 import java.util.ArrayList;
 
 public class PurchaseOrder extends Order {
-    protected double totalOrderAmount;
-    public ArrayList<PurchaseOrderLine> orderedItems = new ArrayList<>();
+    private double totalOrderAmount;
+    private final ArrayList<PurchaseOrderLine> orderedItems;
 
     public PurchaseOrder(int orderNr) {
         super(orderNr);
+        this.orderedItems = new ArrayList<>();
     }
 
     @Override

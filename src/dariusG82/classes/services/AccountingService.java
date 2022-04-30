@@ -4,6 +4,7 @@ import dariusG82.classes.accounting.DailyReport;
 import dariusG82.classes.accounting.finance.CashOperation;
 import dariusG82.classes.accounting.finance.CashRecord;
 import dariusG82.classes.accounting.orders.*;
+import dariusG82.classes.custom_exeptions.ClientDoesNotExistExeption;
 import dariusG82.classes.custom_exeptions.NegativeBalanceException;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
 import dariusG82.classes.warehouse.ReturnedItem;
@@ -27,7 +28,7 @@ public class AccountingService extends Service {
         }
     }
 
-    public Order getDocumentByID(String id) {
+    public Order getDocumentByID(String id) throws WrongDataPathExeption, ClientDoesNotExistExeption {
         String documentBegins = id.substring(0, id.indexOf(" ") + 1);
         String index = id.substring(id.indexOf(" ") + 1);
         int orderNr = Integer.parseInt(index);
@@ -43,7 +44,7 @@ public class AccountingService extends Service {
         return null;
     }
 
-    private Order getOrder(String orderDataPath, int orderNr) {
+    private Order getOrder(String orderDataPath, int orderNr) throws WrongDataPathExeption, ClientDoesNotExistExeption {
         ArrayList<OrderLine> orderLines = dataService.getAllOrderLines(orderDataPath);
         Order order = null;
 
@@ -58,44 +59,38 @@ public class AccountingService extends Service {
         }
 
         for (OrderLine orderLine : orderLines) {
-            if (orderLine.orderNr == orderNr) {
+            if (orderLine.getOrderNr() == orderNr) {
                 if (orderLine instanceof SalesOrderLine salesOrderLine && order instanceof SalesOrder) {
                     ((SalesOrder) order).getOrderItems().add(salesOrderLine);
+                    ((SalesOrder) order).setClient(getClientByName(salesOrderLine.getClientName()));
                 }
                 if (orderLine instanceof ReturnOrderLine returnOrderLine && order instanceof ReturnOrder) {
                     ((ReturnOrder) order).getOrderItems().add(returnOrderLine);
+                    ((ReturnOrder) order).setClient(getClientByName(returnOrderLine.getClientName()));
                 }
             }
         }
         return order;
     }
 
-    public void updateSalesOrderLine(SalesOrder salesOrder) throws WrongDataPathExeption, IOException {
-        ArrayList<OrderLine> allSalesOrderLines = dataService.getAllOrderLines(SALES_ORDERS_PATH);
+    public void updateOrderLines(Order order, String dataPath) throws WrongDataPathExeption, IOException {
+        ArrayList<OrderLine> orderLines = dataService.getAllOrderLines(dataPath);
 
-        if (allSalesOrderLines == null) {
+        if(orderLines == null){
             throw new WrongDataPathExeption();
         }
 
-        ArrayList<SalesOrderLine> orderLines = salesOrder.getOrderItems();
-
-        allSalesOrderLines.addAll(orderLines);
-
-        dataService.rewriteOrderLines(allSalesOrderLines, SALES_ORDERS_PATH);
-    }
-
-    public void updateReturnOrderLines(ReturnOrder returnOrder) throws WrongDataPathExeption, IOException {
-        ArrayList<OrderLine> allReturnOrdersLines = dataService.getAllOrderLines(RETURN_ORDERS_PATH);
-
-        if (allReturnOrdersLines == null) {
-            throw new WrongDataPathExeption();
+        if(dataPath.equals(SALES_ORDERS_PATH)  && order instanceof SalesOrder salesOrder){
+            ArrayList<SalesOrderLine> salesOrderLines = salesOrder.getOrderItems();
+            orderLines.addAll(salesOrderLines);
+        } else if(dataPath.equals(RETURN_ORDERS_PATH) && order instanceof ReturnOrder returnOrder){
+            ArrayList<ReturnOrderLine> returnOrderLines = returnOrder.getOrderItems();
+            orderLines.addAll(returnOrderLines);
+        } else {
+            return;
         }
 
-        ArrayList<ReturnOrderLine> orderLines = returnOrder.getOrderItems();
-
-        allReturnOrdersLines.addAll(orderLines);
-
-        dataService.rewriteOrderLines(allReturnOrdersLines, RETURN_ORDERS_PATH);
+        dataService.rewriteOrderLines(orderLines, dataPath);
     }
 
     public void refreshSalesOrdersQuantity(SalesOrder salesOrder, ReturnedItem item, int quantity) throws WrongDataPathExeption, IOException {
@@ -177,29 +172,78 @@ public class AccountingService extends Service {
         return totalSales;
     }
 
-    public void updateBalance(OrderLine orderLine) throws WrongDataPathExeption, IOException, NegativeBalanceException {
-        ArrayList<String> dataList = dataService.getDataStrings();
+//    public void updateBalance(OrderLine orderLine) throws WrongDataPathExeption, IOException, NegativeBalanceException {
+//        ArrayList<String> dataList = dataService.getDataStrings();
+//
+//        if (dataList == null) {
+//            throw new WrongDataPathExeption();
+//        }
+//
+//        double newBalance = 0.0;
+//
+//        if (orderLine instanceof SalesOrderLine salesOrderLine) {
+//            newBalance = getBalanceFromDataString(CURRENT_BALANCE) + salesOrderLine.getLineAmount();
+//        } else if (orderLine instanceof ReturnOrderLine returnOrderLine) {
+//            newBalance = getBalanceFromDataString(CURRENT_BALANCE) - returnOrderLine.getLineAmount();
+//        } else if (orderLine instanceof PurchaseOrderLine purchaseOrderLine) {
+//            newBalance = getBalanceFromDataString(CURRENT_BALANCE) - purchaseOrderLine.getLineAmount();
+//        }
+//
+//        if (newBalance > 0) {
+//            updateBalanceStringData(dataList, newBalance);
+//            dataService.updateDataStrings(dataList);
+//        } else {
+//            throw new NegativeBalanceException();
+//        }
+//    }
 
-        if (dataList == null) {
+    public void updateCashBalance(double amount, String dataId) throws WrongDataPathExeption, IOException, NegativeBalanceException {
+        ArrayList<String> datalist = dataService.getDataStrings();
+
+        if(datalist == null){
             throw new WrongDataPathExeption();
         }
 
-        double newBalance = 0.0;
+        double currentBalance = getBalanceFromDataString(dataId);
+        double newBalance = currentBalance + amount;
 
-        if (orderLine instanceof SalesOrderLine salesOrderLine) {
-            newBalance = getBalanceFromDataString() + salesOrderLine.getLineAmount();
-        } else if (orderLine instanceof ReturnOrderLine returnOrderLine) {
-            newBalance = getBalanceFromDataString() - returnOrderLine.getLineAmount();
-        } else if (orderLine instanceof PurchaseOrderLine purchaseOrderLine) {
-            newBalance = getBalanceFromDataString() - purchaseOrderLine.getLineAmount();
-        }
-
-        if (newBalance > 0) {
-            updateBalanceStringData(dataList, newBalance);
-            dataService.updateDataStrings(dataList);
-        } else {
+        if(newBalance < 0){
             throw new NegativeBalanceException();
         }
+
+        for(String data : datalist){
+            if(data.startsWith(dataId)){
+                updateBalanceStringData(datalist, newBalance, dataId);
+                dataService.updateDataStrings(datalist);
+            }
+        }
+    }
+
+    public boolean isOrderReceivedPayment(Order order){
+        ArrayList<OrderLine> salesOrders = dataService.getAllOrderLines(SALES_ORDERS_PATH);
+
+        for (OrderLine orderLine : salesOrders){
+            if(orderLine.getOrderNr() == order.getOrderID() && ((SalesOrderLine) orderLine).isPaymentReceived()){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void updateSalesOrderStatus(int orderId) throws IOException, WrongDataPathExeption {
+        ArrayList<OrderLine> salesOrders = dataService.getAllOrderLines(SALES_ORDERS_PATH);
+        ArrayList<OrderLine> updatedOrders = new ArrayList<>();
+
+        for(OrderLine orderLine : salesOrders){
+            SalesOrderLine salesOrderLine = (SalesOrderLine) orderLine;
+            if(orderLine.getOrderNr() == orderId){
+                salesOrderLine.setPaymentReceived(true);
+            }
+            updatedOrders.add(salesOrderLine);
+        }
+
+        dataService.rewriteOrderLines(updatedOrders, SALES_ORDERS_PATH);
     }
 
     public void countIncomeAndExpensesByDays() throws WrongDataPathExeption, IOException {
@@ -313,12 +357,12 @@ public class AccountingService extends Service {
         return recordsForMonth;
     }
 
-    private void updateBalanceStringData(ArrayList<String> dataList, double newBalance) {
+    private void updateBalanceStringData(ArrayList<String> dataList, double newBalance, String dataId) {
         for (String data : dataList) {
-            if (data.startsWith(CURRENT_BALANCE)) {
+            if (data.startsWith(dataId)) {
                 int index = dataList.indexOf(data);
                 String balance = newBalance + "0";
-                String balanceString = data.substring(0, data.indexOf("-") + 1) + balance.substring(0, balance.indexOf(".") + 2);
+                String balanceString = data.substring(0, data.indexOf("=") + 1) + balance.substring(0, balance.indexOf(".") + 2);
                 dataList.set(index, balanceString);
             }
         }

@@ -3,10 +3,7 @@ package dariusG82.classes.services;
 import dariusG82.classes.accounting.DailyReport;
 import dariusG82.classes.accounting.finance.CashOperation;
 import dariusG82.classes.accounting.finance.CashRecord;
-import dariusG82.classes.accounting.orders.OrderLine;
-import dariusG82.classes.accounting.orders.PurchaseOrderLine;
-import dariusG82.classes.accounting.orders.ReturnOrderLine;
-import dariusG82.classes.accounting.orders.SalesOrderLine;
+import dariusG82.classes.accounting.orders.*;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
 import dariusG82.classes.data.DataManagement;
 import dariusG82.classes.partners.Client;
@@ -81,23 +78,29 @@ public class DataFromFileService implements DataManagement {
             Scanner scanner = new Scanner(new File(path));
             while (scanner.hasNext()) {
                 String orderIdString = scanner.nextLine();
+                String clientName = scanner.nextLine();
                 String itemName = scanner.nextLine();
-                String quantityString = scanner.nextLine();
-                String unitPriceString = scanner.nextLine();
+                int quantity = Integer.parseInt(scanner.nextLine());
+                double unitPrice = Double.parseDouble(scanner.nextLine());
                 String salesmanID = scanner.nextLine();
+                boolean orderConfirmed = false;
+                if (path.equals(SALES_ORDERS_PATH)) {
+                    orderConfirmed = Boolean.parseBoolean(scanner.nextLine());
+                }
                 scanner.nextLine();
 
                 int id = Integer.parseInt(orderIdString.substring(orderIdString.indexOf(" ") + 1));
-                int quantity = Integer.parseInt(quantityString);
-                double unitPrice = Double.parseDouble(unitPriceString);
 
                 OrderLine orderLine;
                 switch (path) {
-                    case SALES_ORDERS_PATH ->
-                            orderLine = new SalesOrderLine(id, itemName, quantity, unitPrice, salesmanID);
+                    case SALES_ORDERS_PATH -> {
+                        orderLine = new SalesOrderLine(id, clientName, itemName, quantity, unitPrice, salesmanID);
+                        ((SalesOrderLine) orderLine).setPaymentReceived(orderConfirmed);
+                    }
                     case RETURN_ORDERS_PATH ->
-                            orderLine = new ReturnOrderLine(id, itemName, quantity, unitPrice, salesmanID);
-                    default -> orderLine = new OrderLine(id, itemName, quantity, unitPrice, salesmanID);
+                            orderLine = new ReturnOrderLine(id, clientName, itemName, quantity, unitPrice, salesmanID);
+
+                    default -> orderLine = new OrderLine(id, clientName, itemName, quantity, unitPrice, salesmanID);
                 }
 
                 orderLines.add(orderLine);
@@ -121,10 +124,14 @@ public class DataFromFileService implements DataManagement {
 
         for (OrderLine orderLine : orderLines) {
             printWriter.println(prefix + orderLine.getOrderNr());
+            printWriter.println(orderLine.getClientName());
             printWriter.println(orderLine.getItemName());
             printWriter.println(orderLine.getLineQuantity());
             printWriter.println(orderLine.getUnitPrice());
             printWriter.println(orderLine.getSalesmanID());
+            if (path.equals(SALES_ORDERS_PATH)) {
+                printWriter.println(((SalesOrderLine) orderLine).isPaymentReceived());
+            }
             printWriter.println();
         }
 
@@ -270,7 +277,7 @@ public class DataFromFileService implements DataManagement {
     public ArrayList<Client> getAllClients() {
         try {
             Scanner scanner = new Scanner(new File(CLIENT_PATH));
-            ArrayList<Client> partners = new ArrayList<>();
+            ArrayList<Client> allClients = new ArrayList<>();
 
             while (scanner.hasNext()) {
                 String partnerName = scanner.nextLine();
@@ -280,25 +287,26 @@ public class DataFromFileService implements DataManagement {
                 String country = scanner.nextLine();
                 scanner.nextLine();
 
-                partners.add(new Client(partnerName, businessID, streetAddress, city, country));
+                allClients.add(new Client(partnerName, businessID, streetAddress, city, country));
             }
 
-            return partners;
+            return allClients;
         } catch (FileNotFoundException e) {
             return null;
         }
     }
 
+    @Override
     public void updateClientsDatabase(ArrayList<Client> clients) {
         try {
             PrintWriter printWriter = new PrintWriter(new FileWriter(CLIENT_PATH));
 
             for (Client partner : clients) {
-                printWriter.println(partner.getClientName());
-                printWriter.println(partner.getBusinessID());
-                printWriter.println(partner.getStreetAddress());
-                printWriter.println(partner.getCity());
-                printWriter.println(partner.getCountry());
+                printWriter.println(partner.clientName());
+                printWriter.println(partner.businessID());
+                printWriter.println(partner.streetAddress());
+                printWriter.println(partner.city());
+                printWriter.println(partner.country());
                 printWriter.println();
             }
 
@@ -380,10 +388,7 @@ public class DataFromFileService implements DataManagement {
         }
     }
 
-    public void updatedOrderList(ArrayList<PurchaseOrderLine> orderLines) throws IOException {
-        PrintWriter printWriter = new PrintWriter(new FileWriter(PURCHASE_ORDERS_PATH));
-        printWriter.close();
-
+    public void updatePurchaseOrderLines(ArrayList<PurchaseOrderLine> orderLines) throws IOException {
         for (PurchaseOrderLine orderLine : orderLines) {
             addItemToPurchaseOrder(orderLine);
         }
@@ -391,6 +396,7 @@ public class DataFromFileService implements DataManagement {
 
     public void addItemToPurchaseOrder(PurchaseOrderLine orderLine) throws IOException {
         PrintWriter printWriter = new PrintWriter(new FileWriter(PURCHASE_ORDERS_PATH, true));
+
 
         printWriter.println(orderLine.getOrderNr());
         printWriter.println(orderLine.getItemName());
@@ -401,6 +407,7 @@ public class DataFromFileService implements DataManagement {
         printWriter.println(orderLine.getLineQuantity());
         printWriter.println(orderLine.isFinished());
         printWriter.println();
+
 
         printWriter.close();
     }

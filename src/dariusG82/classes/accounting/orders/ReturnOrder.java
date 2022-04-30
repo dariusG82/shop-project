@@ -1,14 +1,26 @@
 package dariusG82.classes.accounting.orders;
 
+import dariusG82.classes.partners.Client;
+
 import java.util.ArrayList;
 
 public class ReturnOrder extends Order {
-    public ArrayList<ReturnOrderLine> returnItems;
-    protected double totalOrderAmount;
+    private final ArrayList<ReturnOrderLine> returnItems;
+    private double totalOrderAmount;
+
+    private Client client;
 
     public ReturnOrder(int orderID) {
         super(orderID);
         this.returnItems = new ArrayList<>();
+    }
+
+    public Client getClient(){
+        return client;
+    }
+
+    public void setClient(Client client) {
+        this.client = client;
     }
 
     public ArrayList<ReturnOrderLine> getOrderItems() {

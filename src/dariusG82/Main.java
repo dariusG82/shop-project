@@ -111,7 +111,7 @@ public class Main {
         System.out.printf("Welcome, %s %s!\n", currentUser.getName(), currentUser.getSurname());
         while (true) {
             printAccountantMenu();
-            switch (getChoiceFromScanner(scanner)) {
+            switch (getChoiceFromScanner(scanner, 2)) {
                 case 1 -> startFinancialOperations(scanner);
                 case 2 -> startClientsOperations(scanner);
                 case 0 -> {
@@ -133,7 +133,7 @@ public class Main {
     private static void startFinancialOperations(Scanner scanner) {
         while (true) {
             printFinancialMenu();
-            switch (getChoiceFromScanner(scanner)) {
+            switch (getChoiceFromScanner(scanner, 6)) {
                 case 1 -> getDailySalesReturnsBalance();
                 case 2 -> getBalanceForADay(scanner);
                 case 3 -> getBalanceForAMonth(scanner);
@@ -163,7 +163,7 @@ public class Main {
     private static void startClientsOperations(Scanner scanner) {
         while (true) {
             printClientsServiceMenu();
-            switch (getChoiceFromScanner(scanner)) {
+            switch (getChoiceFromScanner(scanner, 3)) {
                 case 1 -> addNewClient(scanner);
                 case 2 -> getClientIDByClientName(scanner);
                 case 3 -> deleteClient(scanner);
@@ -327,11 +327,11 @@ public class Main {
 
         try {
             businessService.addNewClientToDatabase(client);
-            System.out.printf("New client %s added successfully!\n", client.getClientName());
+            System.out.printf("New client %s added successfully!\n", client.clientName());
         } catch (WrongDataPathExeption e) {
             System.out.println(e.getMessage());
         } catch (IOException e) {
-            System.out.printf("Client %s was not added\n", client.getClientName());
+            System.out.printf("Client %s was not added\n", client.clientName());
         }
     }
 
@@ -354,8 +354,8 @@ public class Main {
         System.out.print("Enter client name: ");
         String name = scanner.nextLine();
         try {
-            Client partner = businessService.getClientName(name);
-            System.out.printf("Client %s id is: %s\n", name, partner.getBusinessID());
+            Client partner = businessService.getClientByName(name);
+            System.out.printf("Client %s id is: %s\n", name, partner.businessID());
         } catch (WrongDataPathExeption | ClientDoesNotExistExeption e) {
             System.out.println(e.getMessage());
         }
@@ -365,9 +365,9 @@ public class Main {
         System.out.print("Enter name of client you want to delete: ");
         String name = scanner.nextLine();
         try {
-            Client client = businessService.getClientName(name);
+            Client client = businessService.getClientByName(name);
             businessService.deleteClientFromDatabase(client);
-            System.out.printf("Client %s successfully deleted\n", client.getClientName());
+            System.out.printf("Client %s successfully deleted\n", client.clientName());
         } catch (WrongDataPathExeption | ClientDoesNotExistExeption e) {
             System.out.println(e.getMessage());
         }
@@ -377,14 +377,15 @@ public class Main {
         System.out.printf("Welcome, %s %s!\n", currentUser.getName(), currentUser.getSurname());
         while (true) {
             printSalesmanMenu();
-            switch (getChoiceFromScanner(scanner)) {
+            switch (getChoiceFromScanner(scanner, 8)) {
                 case 1 -> createNewSalesOperation(scanner, currentUser);
-                case 2 -> findSalesDocumentByID(scanner);
-                case 3 -> createNewReturnOperation(scanner, currentUser);
-                case 4 -> findReturnDocumentByID(scanner);
-                case 5 -> createPurchaseOrderToWarehouse(scanner);
-                case 6 -> receiveGoodsToWarehouse(scanner);
-                case 7 -> showWarehouseStock();
+                case 2 -> makePaymentForSalesOrder(scanner);
+                case 3 -> findSalesDocumentByID(scanner);
+                case 4 -> createNewReturnOperation(scanner, currentUser);
+                case 5 -> findReturnDocumentByID(scanner);
+                case 6 -> createPurchaseOrderToWarehouse(scanner);
+                case 7 -> receiveGoodsToWarehouse(scanner);
+                case 8 -> showWarehouseStock();
                 case 0 -> {
                     return;
                 }
@@ -396,13 +397,14 @@ public class Main {
     private static void printSalesmanMenu() {
         System.out.println("Sales Operations:");
         System.out.println("**********************");
-        System.out.println("[1] - Sale operation");
-        System.out.println("[2] - Find sales document by document Nr.");
-        System.out.println("[3] - Return operation");
-        System.out.println("[4] - Find return document by document Nr. ");
-        System.out.println("[5] - Create goods order to shop");
-        System.out.println("[6] - Receive goods to warehouse by order Nr.");
-        System.out.println("[7] - Print warehouse stock");
+        System.out.println("[1] - Create sales order");
+        System.out.println("[2] - Make payment for sales order");
+        System.out.println("[3] - Find sales document by document Nr.");
+        System.out.println("[4] - Return operation");
+        System.out.println("[5] - Find return document by document Nr. ");
+        System.out.println("[6] - Create goods order to shop");
+        System.out.println("[7] - Receive goods to warehouse by order Nr.");
+        System.out.println("[8] - Print warehouse stock");
         System.out.println("[0] - Return to previous menu");
     }
 
@@ -410,20 +412,25 @@ public class Main {
         System.out.println("Creating new Sales document");
         System.out.println("Enter client name: ");
         String clientName = scanner.nextLine();
-        if (!businessService.isClientInDatabase(clientName)) {
-            System.out.printf("Client %s is not in database, ask your accountant to add new client\n", clientName);
+        Client client;
+        try {
+            client = businessService.getClientByName(clientName);
+        } catch (ClientDoesNotExistExeption | WrongDataPathExeption e){
+            System.out.println(e.getMessage());
             return;
         }
+
         try {
             int salesOrderID = accountingService.getNewDocumentNumber(SALES_ORDER_NR_INFO);
             SalesOrder newOrder = new SalesOrder(salesOrderID);
+            newOrder.setClient(client);
             while (true) {
                 System.out.println("[1] - Add item to sales order / [2] - Finish sales order");
 
-                switch (getChoiceFromScanner(scanner)) {
+                switch (getChoiceFromScanner(scanner, 2)) {
                     case 1 -> finishSalesOrder(scanner, currentUser, salesOrderID, newOrder);
                     case 2 -> {
-                        accountingService.updateSalesOrderLine(newOrder);
+                        accountingService.updateOrderLines(newOrder, accountingService.SALES_ORDERS_PATH);
                         return;
                     }
                     default -> System.out.println("Wrong choice, choose again");
@@ -431,6 +438,60 @@ public class Main {
             }
         } catch (WrongDataPathExeption | IOException e) {
             System.out.println("Cannot create new order / data file doesn't exist");
+        }
+    }
+
+    private static void makePaymentForSalesOrder(Scanner scanner){
+        System.out.println("Choose your payment method: [1] - Cash, [2] - Credit card");
+        switch (getChoiceFromScanner(scanner, 2)){
+            case 1 -> makePayment(scanner, CASH_REGISTER);
+            case 2 -> makePayment(scanner, BANK_ACCOUNT);
+            default -> System.out.println("No such payment method, choose again");
+        }
+    }
+
+    private static void makePayment(Scanner scanner, String paymentMethod){
+        System.out.println("Enter document Nr. for which you want to make payment");
+        Order order = getDocumentFromAccounting(scanner);
+
+        if(!(order instanceof SalesOrder)){
+            System.out.println("Wrong document number");
+            return;
+        }
+
+        if(accountingService.isOrderReceivedPayment(order)){
+            System.out.println("Order is already paid");
+            return;
+        }
+
+        while (true){
+            try {
+                System.out.print("Enter amount of money you want to pay: ");
+                double amount = Double.parseDouble(scanner.nextLine());
+                double orderAmount = order.getTotalOrderAmount();
+                if(paymentMethod.equals(BANK_ACCOUNT)){
+                    System.out.printf("Credit card charged for %.2f Eur\n", orderAmount);
+                    accountingService.updateCashBalance(orderAmount, paymentMethod);
+                    accountingService.updateSalesOrderStatus(order.getOrderID());
+                    return;
+                }
+                if(amount == orderAmount || amount > orderAmount){
+                    accountingService.updateCashBalance(orderAmount, paymentMethod);
+                    accountingService.updateSalesOrderStatus(order.getOrderID());
+                    System.out.println("Cash payment is accepted");
+                    if(amount > orderAmount){
+                        System.out.printf("Your return is: %.2f\n", amount - orderAmount);
+                    }
+                    return;
+                } else {
+                    System.out.println("Not enough money to pay for order");
+                }
+            } catch (NumberFormatException e){
+                System.out.println("Wrong amount, try again");
+            } catch (WrongDataPathExeption | NegativeBalanceException | IOException e){
+                System.out.println("Payment failed");
+                System.out.println(e.getMessage());
+            }
         }
     }
 
@@ -442,8 +503,9 @@ public class Main {
         }
         int quantity = getItemQuantity(scanner, item);
         try {
-            SalesOrderLine salesOrderLine = new SalesOrderLine(salesOrderID, item.getItemName(), quantity, item.getSalePrice(), currentUser.getName());
-            updateSalesLine(currentUser, salesOrderID, item, quantity, salesOrderLine);
+            SalesOrderLine salesOrderLine = new SalesOrderLine
+                    (salesOrderID, newOrder.getClient().clientName(), item.getItemName(), quantity, item.getSalePrice(), currentUser.getName());
+            updateSalesLine(item, salesOrderLine);
             newOrder.addSalesOrderLineToOrder(salesOrderLine);
         } catch (NegativeBalanceException | ItemIsNotInWarehouseExeption e) {
             System.out.println(e.getMessage());
@@ -495,12 +557,13 @@ public class Main {
             try {
                 int returnOrderID = accountingService.getNewDocumentNumber(RETURN_ORDER_NR_INFO);
                 ReturnOrder returnOrder = new ReturnOrder(returnOrderID);
+                returnOrder.setClient(salesOrder.getClient());
                 while (true) {
                     System.out.println("[1] - Add item to return order / [2] - Finish return order");
-                    switch (getChoiceFromScanner(scanner)) {
+                    switch (getChoiceFromScanner(scanner, 2)) {
                         case 1 -> updateReturnOrder(scanner, currentUser, salesOrder, returnOrderID, returnOrder);
                         case 2 -> {
-                            accountingService.updateReturnOrderLines(returnOrder);
+                            accountingService.updateOrderLines(returnOrder, accountingService.RETURN_ORDERS_PATH);
                             return;
                         }
                         default -> System.out.println("Wrong choice, choose again");
@@ -524,7 +587,7 @@ public class Main {
         int quantity = getItemQuantity(scanner, returnedItem);
 
         try {
-            ReturnOrderLine returnOrderLine = new ReturnOrderLine(returnOrderID, itemName, quantity, returnedItem.getSalePrice(), currentUser.getUsername());
+            ReturnOrderLine returnOrderLine = new ReturnOrderLine(returnOrderID, returnOrder.getClient().clientName(), itemName, quantity, returnedItem.getSalePrice(), currentUser.getUsername());
             makeGoodsReturn(salesOrder, returnOrderLine, returnedItem, currentUser);
             returnOrder.addSalesOrderLineToOrder(returnOrderLine);
         } catch (NegativeBalanceException e) {
@@ -570,7 +633,7 @@ public class Main {
             PurchaseOrder purchaseOrder = new PurchaseOrder(purchaseNr);
             while (true) {
                 System.out.println("[1] - Add item to purchase order / [2] - Finish order");
-                switch (getChoiceFromScanner(scanner)) {
+                switch (getChoiceFromScanner(scanner, 2)) {
                     case 1 -> {
                         System.out.print("Enter item name: ");
                         String itemName = scanner.nextLine();
@@ -600,8 +663,9 @@ public class Main {
 
     }
 
-    private static void updatePurchaseOrder(PurchaseOrder purchaseOrder, PurchaseOrderLine purchaseOrderLine) throws WrongDataPathExeption, IOException, NegativeBalanceException {
-        accountingService.updateBalance(purchaseOrderLine);
+    private static void updatePurchaseOrder(PurchaseOrder purchaseOrder, PurchaseOrderLine purchaseOrderLine)
+            throws WrongDataPathExeption, IOException, NegativeBalanceException {
+        accountingService.updateCashBalance(-purchaseOrderLine.getLineQuantity(), BANK_ACCOUNT);
         warehouseService.getDataService().addItemToPurchaseOrder(purchaseOrderLine);
         purchaseOrder.addPurchaseOrderLinesToOrder(purchaseOrderLine);
         System.out.printf("Item %s was successfully added to order %d\n", purchaseOrderLine.getItemName(), purchaseOrder.getOrderID());
@@ -652,24 +716,33 @@ public class Main {
         String requestedID = scanner.nextLine();
 
         if (requestedID.startsWith("SF ") || requestedID.startsWith("RE ")) {
-            return accountingService.getDocumentByID(requestedID);
+            try {
+                return accountingService.getDocumentByID(requestedID);
+            } catch (WrongDataPathExeption | ClientDoesNotExistExeption e) {
+                System.out.println(e.getMessage());
+                return null;
+            }
         } else {
             return null;
         }
     }
 
-    private static void updateSalesLine(User currentUser, int salesOrderID, Item item, int quantity, SalesOrderLine salesOrderLine) throws WrongDataPathExeption, IOException, NegativeBalanceException, ItemIsNotInWarehouseExeption {
-        accountingService.updateBalance(salesOrderLine);
-        warehouseService.updateWarehouseStock(item, -quantity);
-        CashRecord cashRecord = new SalesCashRecord(salesOrderID, LocalDate.now(), item.getSalePrice() * quantity, currentUser.getUsername());
+    private static void updateSalesLine(Item item, SalesOrderLine salesOrderLine)
+            throws WrongDataPathExeption, IOException, NegativeBalanceException, ItemIsNotInWarehouseExeption {
+//        accountingService.updateBalance(salesOrderLine);
+        warehouseService.updateWarehouseStock(item, -salesOrderLine.getLineQuantity());
+        CashRecord cashRecord =
+                new SalesCashRecord
+                        (salesOrderLine.getOrderNr(), LocalDate.now(), salesOrderLine.getLineAmount(), salesOrderLine.getSalesmanID());
         accountingService.updateCashRecords(cashRecord);
     }
 
-    private static void makeGoodsReturn(SalesOrder salesOrder, ReturnOrderLine returnOrderLine, ReturnedItem returnedItem, User currentUser) throws NegativeBalanceException, IOException, WrongDataPathExeption, ItemIsNotInWarehouseExeption {
-        accountingService.updateBalance(returnOrderLine);
-        warehouseService.updateWarehouseStock(returnedItem, returnOrderLine.lineQuantity);
-        accountingService.refreshSalesOrdersQuantity(salesOrder, returnedItem, returnOrderLine.lineQuantity);
-        CashRecord cashRecord = new ReturnCashRecord(returnOrderLine.getOrderNr(), LocalDate.now(), returnedItem.getSalePrice() * returnOrderLine.getLineQuantity(), currentUser.getUsername());
+    private static void makeGoodsReturn(SalesOrder salesOrder, ReturnOrderLine returnOrderLine, ReturnedItem returnedItem, User currentUser)
+            throws NegativeBalanceException, IOException, WrongDataPathExeption, ItemIsNotInWarehouseExeption {
+        accountingService.updateCashBalance(-returnOrderLine.getLineAmount(), BANK_ACCOUNT);
+        warehouseService.updateWarehouseStock(returnedItem, returnOrderLine.getLineQuantity());
+        accountingService.refreshSalesOrdersQuantity(salesOrder, returnedItem, returnOrderLine.getLineQuantity());
+        CashRecord cashRecord = new ReturnCashRecord(returnOrderLine.getOrderNr(), LocalDate.now(), returnOrderLine.getLineAmount(), currentUser.getUsername());
         accountingService.updateCashRecords(cashRecord);
     }
 
@@ -720,7 +793,7 @@ public class Main {
         System.out.printf("Welcome, %s %s!\n", currentUser.getName(), currentUser.getSurname());
         while (true) {
             printITSupportMenu();
-            switch (getChoiceFromScanner(scanner)) {
+            switch (getChoiceFromScanner(scanner, 3)) {
                 case 1 -> printListOfUsers();
                 case 2 -> registerNewUser(scanner);
                 case 3 -> removeUserByUsername(scanner, currentUser);
@@ -845,7 +918,7 @@ public class Main {
     private static int getItemQuantity(Scanner scanner, Item item) {
         while (true) {
             System.out.print("Enter quantity: ");
-            int quantity = getChoiceFromScanner(scanner);
+            int quantity = getChoiceFromScanner(scanner, Integer.MAX_VALUE);
             if (quantity == 0) {
                 System.out.println("Quantity cannot be 0");
             } else if (quantity > item.getCurrentQuantity()) {
@@ -856,15 +929,21 @@ public class Main {
         }
     }
 
-    private static int getChoiceFromScanner(Scanner scanner) {
+    private static int getChoiceFromScanner(Scanner scanner, int upperChoiceLimit) {
         String input;
-        int option = 0;
-        try {
-            input = scanner.nextLine();
-            option = Integer.parseInt(input);
-        } catch (NumberFormatException e) {
-            System.out.println("Wrong input format, try again");
+        int option;
+        while (true){
+            try {
+                input = scanner.nextLine();
+                option = Integer.parseInt(input);
+                if(option > upperChoiceLimit && option < 0){
+                    System.out.println("Wrong choice, try again");
+                } else {
+                    return option;
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Wrong input format, try again");
+            }
         }
-        return option;
     }
 }

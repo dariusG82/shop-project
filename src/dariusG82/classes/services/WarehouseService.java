@@ -45,7 +45,7 @@ public class WarehouseService extends Service {
 
         ArrayList<Item> uniqueItems = getUniqueItemsList(allItems);
 
-        dataService.updatedOrderList(updatedOrders);
+        dataService.updatePurchaseOrderLines(updatedOrders);
         dataService.saveWarehouseStock(uniqueItems);
     }
 
@@ -71,11 +71,15 @@ public class WarehouseService extends Service {
         if (allItems == null) {
             throw new ItemIsNotInWarehouseExeption();
         }
-
+        boolean itemQuantityUpdated = false;
         for (Item item : allItems) {
-            if (item.getItemName().equals(soldItem.getItemName())) {
+            if (item.getItemName().equals(soldItem.getItemName()) && item.getSalePrice() == soldItem.getSalePrice()) {
                 item.updateQuantity(quantity);
+                itemQuantityUpdated = true;
             }
+        }
+        if(!itemQuantityUpdated){
+            allItems.add(soldItem);
         }
         dataService.saveWarehouseStock(allItems);
     }
@@ -84,15 +88,15 @@ public class WarehouseService extends Service {
         ArrayList<Item> uniqueItems = new ArrayList<>();
 
         for (Item item : items) {
-            int index = uniqueItems.indexOf(item);
-            if (index != -1) {
-                uniqueItems.get(index).updateQuantity(item.getCurrentQuantity());
-            } else {
-                uniqueItems.add(item);
+            if(item.getCurrentQuantity() > 0){
+                int index = uniqueItems.indexOf(item);
+                if (index != -1) {
+                    uniqueItems.get(index).updateQuantity(item.getCurrentQuantity());
+                } else {
+                    uniqueItems.add(item);
+                }
             }
         }
         return uniqueItems;
     }
-
-
 }

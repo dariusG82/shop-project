@@ -44,7 +44,7 @@ public interface DataManagement {
 
     ArrayList<PurchaseOrderLine> getPurchaseOrderLines();
 
-    void updatedOrderList(ArrayList<PurchaseOrderLine> orderLines) throws IOException;
+    void updatePurchaseOrderLines(ArrayList<PurchaseOrderLine> orderLines) throws IOException;
 
     void addItemToPurchaseOrder(PurchaseOrderLine orderLine) throws IOException;
 }
