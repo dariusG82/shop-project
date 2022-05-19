@@ -1,17 +1,25 @@
-package dariusG82.classes.services;
+package dariusG82.classes.services.file_services;
 
 import dariusG82.classes.accounting.orders.PurchaseOrderLine;
 import dariusG82.classes.custom_exeptions.ItemIsNotInWarehouseExeption;
 import dariusG82.classes.custom_exeptions.PurchaseOrderDoesNotExistExeption;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
+import dariusG82.classes.data.interfaces.DataManagement;
+import dariusG82.classes.data.interfaces.FileReaderInterface;
+import dariusG82.classes.data.interfaces.WarehouseInterface;
 import dariusG82.classes.warehouse.Item;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class WarehouseService extends Service {
+public class WarehouseFileService extends FileService implements WarehouseInterface, FileReaderInterface {
 
+    private final DataManagement dataService;
+    public WarehouseFileService(DataManagement dataService) {
+        this.dataService = dataService;
+    }
+    @Override
     public int getNewPurchaseOrderNumber() throws WrongDataPathExeption, IOException {
         int documentNr = getInfoFromDataString(PURCHASE_ORDER_NR_INFO);
 
@@ -21,7 +29,7 @@ public class WarehouseService extends Service {
             throw new WrongDataPathExeption();
         }
     }
-
+    @Override
     public void receiveGoods(int purchaseOrder) throws PurchaseOrderDoesNotExistExeption, IOException {
         ArrayList<PurchaseOrderLine> purchaseOrdersLines = dataService.getPurchaseOrderLines();
         ArrayList<Item> allItems = dataService.getAllWarehouseItems();
@@ -49,6 +57,7 @@ public class WarehouseService extends Service {
         dataService.saveWarehouseStock(uniqueItems);
     }
 
+    @Override
     public Item getItemFromWarehouse(String itemName) throws ItemIsNotInWarehouseExeption {
         ArrayList<Item> allItems = dataService.getAllWarehouseItems();
 
@@ -65,6 +74,7 @@ public class WarehouseService extends Service {
         throw new ItemIsNotInWarehouseExeption();
     }
 
+    @Override
     public void updateWarehouseStock(Item soldItem, int quantity) throws IOException, ItemIsNotInWarehouseExeption {
         ArrayList<Item> allItems = dataService.getAllWarehouseItems();
 

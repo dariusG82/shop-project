@@ -15,7 +15,7 @@ public class ReturnOrder extends Order {
         this.returnItems = new ArrayList<>();
     }
 
-    public Client getClient(){
+    public Client getClient() {
         return client;
     }
 
@@ -23,6 +23,7 @@ public class ReturnOrder extends Order {
         this.client = client;
     }
 
+    @Override
     public ArrayList<ReturnOrderLine> getOrderItems() {
         return returnItems;
     }

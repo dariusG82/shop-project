@@ -1,7 +1,10 @@
-package dariusG82.classes.services;
+package dariusG82.classes.services.file_services;
 
 import dariusG82.classes.custom_exeptions.UserNotFoundException;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
+import dariusG82.classes.data.interfaces.AdminInterface;
+import dariusG82.classes.data.interfaces.DataManagement;
+import dariusG82.classes.data.interfaces.FileReaderInterface;
 import dariusG82.classes.users.User;
 import dariusG82.classes.users.UserType;
 
@@ -9,18 +12,27 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
-public class AdminService extends Service {
+import static dariusG82.classes.services.file_services.FileService.CURRENT_DATE;
 
+public class AdminFileService implements AdminInterface, FileReaderInterface {
+
+    private final DataManagement dataService;
+    public AdminFileService(DataManagement dataService){
+        this.dataService = dataService;
+    }
+
+    @Override
     public boolean isUsernameUnique(String username) {
         ArrayList<User> users = dataService.getAllUsers();
         for (User user : users) {
-            if (user.getUsername().equals(username)) {
+            if (user.username().equals(username)) {
                 return false;
             }
         }
         return true;
     }
 
+    @Override
     public void addNewUser(User user) throws IOException {
         ArrayList<User> users = dataService.getAllUsers();
 
@@ -29,11 +41,12 @@ public class AdminService extends Service {
         dataService.updateAllUsers(users);
     }
 
+    @Override
     public void removeUser(String username) throws UserNotFoundException, IOException {
         ArrayList<User> users = dataService.getAllUsers();
 
-        if (isUserExist(username)) {
-            users.removeIf(user -> user.getUsername().equals(username));
+        if (isUserInDatabase(username)) {
+            users.removeIf(user -> user.username().equals(username));
             dataService.updateAllUsers(users);
             return;
         }
@@ -41,32 +54,23 @@ public class AdminService extends Service {
         throw new UserNotFoundException();
     }
 
-    private boolean isUserExist(String username) {
-        ArrayList<User> users = dataService.getAllUsers();
-
-        for (User user : users) {
-            if (user.getUsername().equals(username)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
+    @Override
     public User getUserByType(String username, String password, UserType type) throws UserNotFoundException {
         User user = getUserByUsername(username);
 
-        if(user != null && user.getUserType().equals(type) && user.getPassword().equals(password)){
+        if(user != null && user.userType().equals(type) && user.password().equals(password)){
             return user;
         }
 
         throw new UserNotFoundException();
     }
 
+    @Override
     public User getUserByUsername(String username){
         ArrayList<User> users = dataService.getAllUsers();
 
         for(User user : users){
-            if(user.getUsername().equals(username)){
+            if(user.username().equals(username)){
                 return user;
             }
         }
@@ -74,7 +78,7 @@ public class AdminService extends Service {
     }
 
     public void updateCurrentDateInDataString(LocalDate currentDate) throws WrongDataPathExeption, IOException {
-        ArrayList<String> datalist = dataService.getDataStrings();
+        ArrayList<String> datalist = reader.getDataStrings();
 
         if (datalist == null) {
             throw new WrongDataPathExeption();
@@ -88,6 +92,17 @@ public class AdminService extends Service {
                 break;
             }
         }
-        dataService.updateDataStrings(datalist);
+        reader.updateDataStrings(datalist);
+    }
+
+    private boolean isUserInDatabase(String username) {
+        ArrayList<User> users = dataService.getAllUsers();
+
+        for (User user : users) {
+            if (user.username().equals(username)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

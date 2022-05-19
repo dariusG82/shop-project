@@ -102,3 +102,11 @@ Tusinukas
 Saulius
 true
 
+SF 7
+UAB "Zebru chebra"
+Tusinukas
+10
+0.39
+Saulius
+true
+

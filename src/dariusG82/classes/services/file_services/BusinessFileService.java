@@ -1,14 +1,22 @@
-package dariusG82.classes.services;
+package dariusG82.classes.services.file_services;
 
-import dariusG82.classes.custom_exeptions.ClientDoesNotExistExeption;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
+import dariusG82.classes.data.interfaces.BusinessInterface;
+import dariusG82.classes.data.interfaces.DataManagement;
 import dariusG82.classes.partners.Client;
 
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class BusinessService extends Service {
+public class BusinessFileService extends FileService implements BusinessInterface {
 
+    private final DataManagement dataService;
+
+    public BusinessFileService(DataManagement dataService) {
+        this.dataService = dataService;
+    }
+
+    @Override
     public void addNewClientToDatabase(Client client) throws IOException, WrongDataPathExeption {
         ArrayList<Client> clients = dataService.getAllClients();
 
@@ -20,22 +28,7 @@ public class BusinessService extends Service {
         }
     }
 
-    public boolean isClientInDatabase(String clientName) {
-        ArrayList<Client> clients = dataService.getAllClients();
-
-        if (clients == null) {
-            return false;
-        }
-        for (Client client : clients) {
-            if (client.clientName().equals(clientName)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-
-
+    @Override
     public void deleteClientFromDatabase(Client clientToDelete) throws WrongDataPathExeption {
         ArrayList<Client> clients = dataService.getAllClients();
 

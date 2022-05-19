@@ -1,16 +1,32 @@
-package dariusG82.classes.services;
+package dariusG82.classes.services.file_services;
 
 import dariusG82.classes.custom_exeptions.ClientDoesNotExistExeption;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
-import dariusG82.classes.data.DataManagement;
+import dariusG82.classes.data.interfaces.DataManagement;
+import dariusG82.classes.data.interfaces.FileReaderInterface;
+import dariusG82.classes.data.interfaces.ServiceInterface;
 import dariusG82.classes.partners.Client;
 
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
-public class Service {
-    protected DataManagement dataService = new DataFromFileService();
+public class FileService implements ServiceInterface, FileReaderInterface {
+
+    private final DataManagement dataService = new DataFromFileService();
+    private final AccountingFileService accountingService;
+    //    private final AdminService adminService;
+    private final BusinessFileService businessService;
+    private final WarehouseFileService warehouseService;
+
+    public FileService() {
+        this.accountingService = new AccountingFileService(this.dataService);
+//        this.adminService = new AdminService(this.dataService);
+        this.businessService = new BusinessFileService(this.dataService);
+        this.warehouseService = new WarehouseFileService(this.dataService);
+
+    }
+
     public static final String CURRENT_DATE = "0|";
     public static final String PURCHASE_ORDER_NR_INFO = "1|";
     public static final String SALES_ORDER_NR_INFO = "2|";
@@ -19,7 +35,7 @@ public class Service {
     public static final String BANK_ACCOUNT = "5|";
 
     protected int getInfoFromDataString(String infoSection) throws IOException, WrongDataPathExeption {
-        ArrayList<String> dataList = dataService.getDataStrings();
+        ArrayList<String> dataList = reader.getDataStrings();
 
         if (dataList == null) {
             throw new WrongDataPathExeption();
@@ -35,7 +51,7 @@ public class Service {
     }
 
     protected double getBalanceFromDataString(String infoSection) throws WrongDataPathExeption {
-        ArrayList<String> dataList = dataService.getDataStrings();
+        ArrayList<String> dataList = reader.getDataStrings();
 
         if (dataList == null) {
             throw new WrongDataPathExeption();
@@ -53,7 +69,7 @@ public class Service {
     }
 
     public LocalDate getLoginDate() throws WrongDataPathExeption {
-        ArrayList<String> datalist = dataService.getDataStrings();
+        ArrayList<String> datalist = reader.getDataStrings();
 
         if (datalist == null) {
             throw new WrongDataPathExeption();
@@ -75,7 +91,7 @@ public class Service {
             int index = dataList.indexOf(data);
             String newString = data.substring(0, data.indexOf("-") + 1) + ++newOrderNumber;
             dataList.set(index, newString);
-            dataService.updateDataStrings(dataList);
+            reader.updateDataStrings(dataList);
             return newOrderNumber;
         }
         return 0;
@@ -104,7 +120,27 @@ public class Service {
         throw new ClientDoesNotExistExeption(name);
     }
 
+    @Override
     public DataManagement getDataService() {
         return dataService;
+    }
+
+    @Override
+    public WarehouseFileService getWarehouseService() {
+        return warehouseService;
+    }
+
+    @Override
+    public BusinessFileService getBusinessService() {
+        return businessService;
+    }
+
+    @Override
+    public AccountingFileService getAccountingService() {
+        return accountingService;
+    }
+
+    public void countIncomeAndExpensesByDays() throws WrongDataPathExeption, IOException {
+
     }
 }

@@ -1,4 +1,4 @@
-package dariusG82.classes.services;
+package dariusG82.classes.services.file_services;
 
 import dariusG82.classes.accounting.DailyReport;
 import dariusG82.classes.accounting.finance.CashOperation;
@@ -7,16 +7,24 @@ import dariusG82.classes.accounting.orders.*;
 import dariusG82.classes.custom_exeptions.ClientDoesNotExistExeption;
 import dariusG82.classes.custom_exeptions.NegativeBalanceException;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
+import dariusG82.classes.data.interfaces.AccountingInterface;
+import dariusG82.classes.data.interfaces.DataManagement;
+import dariusG82.classes.data.interfaces.FileReaderInterface;
 import dariusG82.classes.warehouse.ReturnedItem;
 
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
-public class AccountingService extends Service {
+public class AccountingFileService extends FileService implements AccountingInterface, FileReaderInterface {
 
+    private final DataManagement dataService;
     public final String RETURN_ORDERS_PATH = "src/dariusG82/classes/data/orders/returnOrderList";
     public final String SALES_ORDERS_PATH = "src/dariusG82/classes/data/orders/salesOrderList.txt";
+
+    public AccountingFileService(DataManagement dataService) {
+        this.dataService = dataService;
+    }
 
     public void updateCashRecords(CashRecord cashRecord) throws IOException {
         ArrayList<CashRecord> allCashRecords = dataService.getAllCashRecords();
@@ -172,33 +180,8 @@ public class AccountingService extends Service {
         return totalSales;
     }
 
-//    public void updateBalance(OrderLine orderLine) throws WrongDataPathExeption, IOException, NegativeBalanceException {
-//        ArrayList<String> dataList = dataService.getDataStrings();
-//
-//        if (dataList == null) {
-//            throw new WrongDataPathExeption();
-//        }
-//
-//        double newBalance = 0.0;
-//
-//        if (orderLine instanceof SalesOrderLine salesOrderLine) {
-//            newBalance = getBalanceFromDataString(CURRENT_BALANCE) + salesOrderLine.getLineAmount();
-//        } else if (orderLine instanceof ReturnOrderLine returnOrderLine) {
-//            newBalance = getBalanceFromDataString(CURRENT_BALANCE) - returnOrderLine.getLineAmount();
-//        } else if (orderLine instanceof PurchaseOrderLine purchaseOrderLine) {
-//            newBalance = getBalanceFromDataString(CURRENT_BALANCE) - purchaseOrderLine.getLineAmount();
-//        }
-//
-//        if (newBalance > 0) {
-//            updateBalanceStringData(dataList, newBalance);
-//            dataService.updateDataStrings(dataList);
-//        } else {
-//            throw new NegativeBalanceException();
-//        }
-//    }
-
     public void updateCashBalance(double amount, String dataId) throws WrongDataPathExeption, IOException, NegativeBalanceException {
-        ArrayList<String> datalist = dataService.getDataStrings();
+        ArrayList<String> datalist = reader.getDataStrings();
 
         if(datalist == null){
             throw new WrongDataPathExeption();
@@ -214,7 +197,7 @@ public class AccountingService extends Service {
         for(String data : datalist){
             if(data.startsWith(dataId)){
                 updateBalanceStringData(datalist, newBalance, dataId);
-                dataService.updateDataStrings(datalist);
+                reader.updateDataStrings(datalist);
             }
         }
     }

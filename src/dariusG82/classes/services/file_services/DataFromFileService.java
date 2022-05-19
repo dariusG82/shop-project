@@ -1,11 +1,16 @@
-package dariusG82.classes.services;
+package dariusG82.classes.services.file_services;
 
 import dariusG82.classes.accounting.DailyReport;
 import dariusG82.classes.accounting.finance.CashOperation;
 import dariusG82.classes.accounting.finance.CashRecord;
-import dariusG82.classes.accounting.orders.*;
+import dariusG82.classes.accounting.orders.OrderLine;
+import dariusG82.classes.accounting.orders.PurchaseOrderLine;
+import dariusG82.classes.accounting.orders.ReturnOrderLine;
+import dariusG82.classes.accounting.orders.SalesOrderLine;
 import dariusG82.classes.custom_exeptions.WrongDataPathExeption;
-import dariusG82.classes.data.DataManagement;
+import dariusG82.classes.data.interfaces.BusinessInterface;
+import dariusG82.classes.data.interfaces.DataManagement;
+import dariusG82.classes.data.interfaces.WarehouseInterface;
 import dariusG82.classes.partners.Client;
 import dariusG82.classes.users.User;
 import dariusG82.classes.users.UserType;
@@ -18,6 +23,8 @@ import java.util.Scanner;
 
 public class DataFromFileService implements DataManagement {
 
+    private final AdminFileService adminFileService = new AdminFileService(this);
+    private final AccountingFileService accountingFileService = new AccountingFileService(this);
     public final String PURCHASE_ORDERS_PATH = "src/dariusG82/classes/data/orders/purchaseOrderList.txt";
     public final String RETURN_ORDERS_PATH = "src/dariusG82/classes/data/orders/returnOrderList";
     public final String SALES_ORDERS_PATH = "src/dariusG82/classes/data/orders/salesOrderList.txt";
@@ -25,37 +32,12 @@ public class DataFromFileService implements DataManagement {
     public final String CLIENT_PATH = "src/dariusG82/classes/data/clients.txt";
     public final String DAILY_CASH_JOURNALS_PATH = "src/dariusG82/classes/data/dailyCashJournals.txt";
     public final String ALL_CASH_RECORDS_PATH = "src/dariusG82/classes/data/allCashRecords.txt";
-    private final String SYSTEM_DATA_PATH = "src/dariusG82/classes/data/systemData.txt";
     public final String USERS_DATA_PATH = "src/dariusG82/classes/data/users.txt";
     public final String WAREHOUSE_DATA_PATH = "src/dariusG82/classes/data/warehouse.txt";
 
-    public ArrayList<String> getDataStrings() {
-        try {
-            Scanner scanner = new Scanner(new File(SYSTEM_DATA_PATH));
-            ArrayList<String> dataList = new ArrayList<>();
 
-            while (scanner.hasNext()) {
-                String data = scanner.nextLine();
-                scanner.nextLine();
-                dataList.add(data);
-            }
 
-            return dataList;
-        } catch (FileNotFoundException e) {
-            return null;
-        }
-    }
 
-    public void updateDataStrings(ArrayList<String> updatedDataStrings) throws IOException {
-        PrintWriter printWriter = new PrintWriter(new FileWriter(SYSTEM_DATA_PATH));
-
-        for (String dataString : updatedDataStrings) {
-            printWriter.println(dataString);
-            printWriter.println();
-        }
-
-        printWriter.close();
-    }
 
     public void rewriteDailyReports(ArrayList<DailyReport> dailyReports) throws IOException {
         PrintWriter printWriter = new PrintWriter(new FileWriter(DAILY_CASH_JOURNALS_PATH));
@@ -263,11 +245,11 @@ public class DataFromFileService implements DataManagement {
         PrintWriter printWriter = new PrintWriter(new FileWriter(USERS_DATA_PATH));
 
         for (User user : users) {
-            printWriter.println(user.getName());
-            printWriter.println(user.getSurname());
-            printWriter.println(user.getUsername());
-            printWriter.println(user.getPassword());
-            printWriter.println(user.getUserType());
+            printWriter.println(user.name());
+            printWriter.println(user.surname());
+            printWriter.println(user.username());
+            printWriter.println(user.password());
+            printWriter.println(user.userType());
             printWriter.println();
         }
 
@@ -412,5 +394,23 @@ public class DataFromFileService implements DataManagement {
         printWriter.close();
     }
 
+    @Override
+    public AdminFileService getAdmin() {
+        return adminFileService;
+    }
 
+    @Override
+    public AccountingFileService getAccounting() {
+        return accountingFileService;
+    }
+
+    @Override
+    public BusinessInterface getBusiness() {
+        return null;
+    }
+
+    @Override
+    public WarehouseInterface getWarehouse() {
+        return null;
+    }
 }

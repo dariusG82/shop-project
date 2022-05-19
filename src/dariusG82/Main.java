@@ -1,9 +1,10 @@
 package dariusG82;
 
 import dariusG82.classes.accounting.DailyReport;
-import dariusG82.classes.services.*;
+import dariusG82.classes.data.interfaces.ServiceInterface;
 import dariusG82.classes.accounting.finance.*;
 import dariusG82.classes.accounting.orders.*;
+import dariusG82.classes.services.file_services.FileService;
 import dariusG82.classes.users.User;
 import dariusG82.classes.users.UserType;
 import dariusG82.classes.custom_exeptions.*;
@@ -12,21 +13,20 @@ import dariusG82.classes.warehouse.Item;
 import dariusG82.classes.warehouse.ReturnedItem;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-import static dariusG82.classes.services.Service.*;
+import static dariusG82.classes.services.file_services.FileService.*;
 
 public class Main {
-    public static AccountingService accountingService = new AccountingService();
-    public static AdminService adminService = new AdminService();
-    public static BusinessService businessService = new BusinessService();
-    public static WarehouseService warehouseService = new WarehouseService();
+
+    private static final ServiceInterface SERVICE = new FileService();
 
     public static void main(String[] args) {
-        System.out.println("Welcome to OfficeGoodsShop");
+        System.out.println("Welcome to Office Goods Shop");
         updateDailySalesJournal();
 
         Scanner scanner = new Scanner(System.in);
@@ -46,25 +46,31 @@ public class Main {
                     try {
                         UserType type = UserType.ACCOUNTING;
                         User accountingUser = confirmLoginAndGetUser(scanner, type);
-                        loginAsAccountant(scanner, accountingUser);
+                        if (accountingUser != null) {
+                            loginAsAccountant(scanner, accountingUser);
+                        }
                     } catch (UserNotFoundException e) {
                         System.out.println(e.getMessage());
                     }
                 }
                 case 2 -> {
                     try {
-                        UserType type = UserType.SALESPERSON;
+                        UserType type = UserType.SALES;
                         User salesUser = confirmLoginAndGetUser(scanner, type);
-                        loginAsSalesman(scanner, salesUser);
+                        if (salesUser != null) {
+                            loginAsSalesman(scanner, salesUser);
+                        }
                     } catch (UserNotFoundException e) {
                         System.out.println(e.getMessage());
                     }
                 }
                 case 3 -> {
                     try {
-                        UserType type = UserType.IT_SUPPORT;
+                        UserType type = UserType.ADMIN;
                         User supportUser = confirmLoginAndGetUser(scanner, type);
-                        loginAsITSupport(scanner, supportUser);
+                        if (supportUser != null) {
+                            loginAsITSupport(scanner, supportUser);
+                        }
                     } catch (UserNotFoundException e) {
                         System.out.println(e.getMessage());
                     }
@@ -78,13 +84,14 @@ public class Main {
     }
 
     private static void updateDailySalesJournal() {
-        LocalDate localDate = LocalDate.now();
+//        LocalDate localDate = LocalDate.now();
         try {
-            LocalDate lastLoginDate = adminService.getLoginDate();
-            if (!lastLoginDate.equals(localDate)) {
-                adminService.updateCurrentDateInDataString(localDate);
-                accountingService.countIncomeAndExpensesByDays();
-            }
+//            LocalDate lastLoginDate = service.getLoginDate();
+            SERVICE.getDataService().getAccounting().countIncomeAndExpensesByDays();
+//            if (!lastLoginDate.equals(localDate)) {
+//                dataService.getAdmin().updateCurrentDateInDataString(localDate);
+//                service.getAccountingService().countIncomeAndExpensesByDays();
+//            }
         } catch (WrongDataPathExeption | IOException e) {
             System.out.println(e.getMessage());
         }
@@ -104,11 +111,16 @@ public class Main {
         System.out.print("Enter your password: ");
         String password = scanner.nextLine();
 
-        return adminService.getUserByType(username, password, type);
+        try {
+            return SERVICE.getDataService().getAdmin().getUserByType(username, password, type);
+        } catch (SQLException e) {
+            System.out.println("Database error");
+            return null;
+        }
     }
 
     private static void loginAsAccountant(Scanner scanner, User currentUser) {
-        System.out.printf("Welcome, %s %s!\n", currentUser.getName(), currentUser.getSurname());
+        System.out.printf("Welcome, %s %s!\n", currentUser.name(), currentUser.surname());
         while (true) {
             printAccountantMenu();
             switch (getChoiceFromScanner(scanner, 2)) {
@@ -185,7 +197,7 @@ public class Main {
     }
 
     private static void getDailySalesReturnsBalance() {
-        ArrayList<DailyReport> reports = accountingService.getDataService().getDailyReports();
+        ArrayList<DailyReport> reports = SERVICE.getAccountingService().getDataService().getDailyReports();
 
         if (reports == null) {
             System.out.println("There is no daily reports");
@@ -207,7 +219,7 @@ public class Main {
         while (true) {
             try {
                 LocalDate date = getLocalDate(scanner);
-                double cashBalance = accountingService.getDaysBalance(date);
+                double cashBalance = SERVICE.getAccountingService().getDaysBalance(date);
                 System.out.println("*******************");
                 System.out.printf("Balance for %s is: %.2f\n", date, cashBalance);
                 System.out.println("*******************");
@@ -226,7 +238,7 @@ public class Main {
         while (true) {
             try {
                 LocalDate date = getLocalDate(scanner);
-                double cashBalance = accountingService.getMonthBalance(date);
+                double cashBalance = SERVICE.getAccountingService().getMonthBalance(date);
                 System.out.println("*******************");
                 System.out.printf("Balance for %d %s is: %.2f\n", date.getYear(), date.getMonth(), cashBalance);
                 System.out.println("*******************");
@@ -244,7 +256,7 @@ public class Main {
         while (true) {
             try {
                 LocalDate date = getLocalDate(scanner);
-                ArrayList<CashRecord> salesForDay = accountingService.getDailySaleDocuments(date, CashOperation.DAILY_INCOME);
+                ArrayList<CashRecord> salesForDay = SERVICE.getAccountingService().getDailySaleDocuments(date, CashOperation.DAILY_INCOME);
                 if (salesForDay.size() == 0) {
                     System.out.printf("There is no sales document for %s day\n", date);
                     return;
@@ -270,7 +282,7 @@ public class Main {
         while (true) {
             try {
                 LocalDate date = getLocalDate(scanner);
-                ArrayList<CashRecord> salesForDay = accountingService.getDailySaleDocuments(date, CashOperation.DAILY_EXPENSE);
+                ArrayList<CashRecord> salesForDay = SERVICE.getAccountingService().getDailySaleDocuments(date, CashOperation.DAILY_EXPENSE);
                 System.out.printf("Return documents for %s is:\n", date);
                 System.out.println("*******************");
                 for (CashRecord cashRecord : salesForDay) {
@@ -290,7 +302,13 @@ public class Main {
     private static void getSalesBySellerByMonth(Scanner scanner) {
         System.out.print("Enter salesman username to get report: ");
         String sellerUsername = scanner.nextLine();
-        User user = adminService.getUserByUsername(sellerUsername);
+        User user;
+        try {
+            user = SERVICE.getDataService().getAdmin().getUserByUsername(sellerUsername);
+        } catch (SQLException e) {
+            System.out.println("Failed connection to database");
+            return;
+        }
         if(user == null){
             System.out.printf("User with username %s does not exist\n", sellerUsername);
             return;
@@ -299,7 +317,7 @@ public class Main {
             try {
                 System.out.print("Enter month for sales report - format yyyy-mm: ");
                 LocalDate date = getLocalDate(scanner);
-                ArrayList<CashRecord> userSales = accountingService.getSalesReportBySalesperson(sellerUsername, date.getYear(), date.getMonthValue());
+                ArrayList<CashRecord> userSales = SERVICE.getAccountingService().getSalesReportBySalesperson(sellerUsername, date.getYear(), date.getMonthValue());
                 if (userSales.size() == 0) {
                     System.out.printf("No sales data found for %s user for %s %s\n",
                             sellerUsername, date.getYear(), date.getMonth());
@@ -311,7 +329,9 @@ public class Main {
                 }
                 System.out.println("*******************");
                 System.out.printf("Total %s %s sales for %s %s is: %.2f\n",
-                        user.getName(), user.getSurname(), date.getYear(), date.getMonth(), accountingService.getTotalSalesByReport(userSales));
+                        user.name(), user.surname(),
+                        date.getYear(), date.getMonth(),
+                        SERVICE.getAccountingService().getTotalSalesByReport(userSales));
                 System.out.println("*******************");
                 return;
             } catch (NumberFormatException e) {
@@ -326,7 +346,7 @@ public class Main {
         Client client = getNewClientInfo(scanner);
 
         try {
-            businessService.addNewClientToDatabase(client);
+            SERVICE.getBusinessService().addNewClientToDatabase(client);
             System.out.printf("New client %s added successfully!\n", client.clientName());
         } catch (WrongDataPathExeption e) {
             System.out.println(e.getMessage());
@@ -354,7 +374,7 @@ public class Main {
         System.out.print("Enter client name: ");
         String name = scanner.nextLine();
         try {
-            Client partner = businessService.getClientByName(name);
+            Client partner = SERVICE.getBusinessService().getClientByName(name);
             System.out.printf("Client %s id is: %s\n", name, partner.businessID());
         } catch (WrongDataPathExeption | ClientDoesNotExistExeption e) {
             System.out.println(e.getMessage());
@@ -365,8 +385,8 @@ public class Main {
         System.out.print("Enter name of client you want to delete: ");
         String name = scanner.nextLine();
         try {
-            Client client = businessService.getClientByName(name);
-            businessService.deleteClientFromDatabase(client);
+            Client client = SERVICE.getBusinessService().getClientByName(name);
+            SERVICE.getBusinessService().deleteClientFromDatabase(client);
             System.out.printf("Client %s successfully deleted\n", client.clientName());
         } catch (WrongDataPathExeption | ClientDoesNotExistExeption e) {
             System.out.println(e.getMessage());
@@ -374,7 +394,7 @@ public class Main {
     }
 
     private static void loginAsSalesman(Scanner scanner, User currentUser) {
-        System.out.printf("Welcome, %s %s!\n", currentUser.getName(), currentUser.getSurname());
+        System.out.printf("Welcome, %s %s!\n", currentUser.name(), currentUser.surname());
         while (true) {
             printSalesmanMenu();
             switch (getChoiceFromScanner(scanner, 8)) {
@@ -414,14 +434,14 @@ public class Main {
         String clientName = scanner.nextLine();
         Client client;
         try {
-            client = businessService.getClientByName(clientName);
+            client = SERVICE.getBusinessService().getClientByName(clientName);
         } catch (ClientDoesNotExistExeption | WrongDataPathExeption e){
             System.out.println(e.getMessage());
             return;
         }
 
         try {
-            int salesOrderID = accountingService.getNewDocumentNumber(SALES_ORDER_NR_INFO);
+            int salesOrderID = SERVICE.getAccountingService().getNewDocumentNumber(SALES_ORDER_NR_INFO);
             SalesOrder newOrder = new SalesOrder(salesOrderID);
             newOrder.setClient(client);
             while (true) {
@@ -430,7 +450,7 @@ public class Main {
                 switch (getChoiceFromScanner(scanner, 2)) {
                     case 1 -> finishSalesOrder(scanner, currentUser, salesOrderID, newOrder);
                     case 2 -> {
-                        accountingService.updateOrderLines(newOrder, accountingService.SALES_ORDERS_PATH);
+                        SERVICE.getAccountingService().updateOrderLines(newOrder, SERVICE.getAccountingService().SALES_ORDERS_PATH);
                         return;
                     }
                     default -> System.out.println("Wrong choice, choose again");
@@ -459,7 +479,7 @@ public class Main {
             return;
         }
 
-        if(accountingService.isOrderReceivedPayment(order)){
+        if(SERVICE.getAccountingService().isOrderReceivedPayment(order)){
             System.out.println("Order is already paid");
             return;
         }
@@ -471,13 +491,13 @@ public class Main {
                 double orderAmount = order.getTotalOrderAmount();
                 if(paymentMethod.equals(BANK_ACCOUNT)){
                     System.out.printf("Credit card charged for %.2f Eur\n", orderAmount);
-                    accountingService.updateCashBalance(orderAmount, paymentMethod);
-                    accountingService.updateSalesOrderStatus(order.getOrderID());
+                    SERVICE.getAccountingService().updateCashBalance(orderAmount, paymentMethod);
+                    SERVICE.getAccountingService().updateSalesOrderStatus(order.getOrderID());
                     return;
                 }
                 if(amount == orderAmount || amount > orderAmount){
-                    accountingService.updateCashBalance(orderAmount, paymentMethod);
-                    accountingService.updateSalesOrderStatus(order.getOrderID());
+                    SERVICE.getAccountingService().updateCashBalance(orderAmount, paymentMethod);
+                    SERVICE.getAccountingService().updateSalesOrderStatus(order.getOrderID());
                     System.out.println("Cash payment is accepted");
                     if(amount > orderAmount){
                         System.out.printf("Your return is: %.2f\n", amount - orderAmount);
@@ -504,7 +524,7 @@ public class Main {
         int quantity = getItemQuantity(scanner, item);
         try {
             SalesOrderLine salesOrderLine = new SalesOrderLine
-                    (salesOrderID, newOrder.getClient().clientName(), item.getItemName(), quantity, item.getSalePrice(), currentUser.getName());
+                    (salesOrderID, newOrder.getClient().clientName(), item.getItemName(), quantity, item.getSalePrice(), currentUser.name());
             updateSalesLine(item, salesOrderLine);
             newOrder.addSalesOrderLineToOrder(salesOrderLine);
         } catch (NegativeBalanceException | ItemIsNotInWarehouseExeption e) {
@@ -555,7 +575,7 @@ public class Main {
         }
         if (order instanceof SalesOrder salesOrder) {
             try {
-                int returnOrderID = accountingService.getNewDocumentNumber(RETURN_ORDER_NR_INFO);
+                int returnOrderID = SERVICE.getAccountingService().getNewDocumentNumber(RETURN_ORDER_NR_INFO);
                 ReturnOrder returnOrder = new ReturnOrder(returnOrderID);
                 returnOrder.setClient(salesOrder.getClient());
                 while (true) {
@@ -563,7 +583,7 @@ public class Main {
                     switch (getChoiceFromScanner(scanner, 2)) {
                         case 1 -> updateReturnOrder(scanner, currentUser, salesOrder, returnOrderID, returnOrder);
                         case 2 -> {
-                            accountingService.updateOrderLines(returnOrder, accountingService.RETURN_ORDERS_PATH);
+                            SERVICE.getAccountingService().updateOrderLines(returnOrder, SERVICE.getAccountingService().RETURN_ORDERS_PATH);
                             return;
                         }
                         default -> System.out.println("Wrong choice, choose again");
@@ -578,7 +598,7 @@ public class Main {
     private static void updateReturnOrder(Scanner scanner, User currentUser, SalesOrder salesOrder, int returnOrderID, ReturnOrder returnOrder) {
         System.out.print("Enter sold item name: ");
         String itemName = scanner.nextLine();
-        ReturnedItem returnedItem = accountingService.getSoldItemByName(salesOrder, itemName);
+        ReturnedItem returnedItem = SERVICE.getAccountingService().getSoldItemByName(salesOrder, itemName);
 
         if (returnedItem == null) {
             System.out.printf("Cannot find sold item by name: %s\n", itemName);
@@ -587,7 +607,7 @@ public class Main {
         int quantity = getItemQuantity(scanner, returnedItem);
 
         try {
-            ReturnOrderLine returnOrderLine = new ReturnOrderLine(returnOrderID, returnOrder.getClient().clientName(), itemName, quantity, returnedItem.getSalePrice(), currentUser.getUsername());
+            ReturnOrderLine returnOrderLine = new ReturnOrderLine(returnOrderID, returnOrder.getClient().clientName(), itemName, quantity, returnedItem.getSalePrice(), currentUser.username());
             makeGoodsReturn(salesOrder, returnOrderLine, returnedItem, currentUser);
             returnOrder.addSalesOrderLineToOrder(returnOrderLine);
         } catch (NegativeBalanceException e) {
@@ -627,7 +647,7 @@ public class Main {
 
     private static void createPurchaseOrderToWarehouse(Scanner scanner) {
         try {
-            int purchaseNr = warehouseService.getNewPurchaseOrderNumber();
+            int purchaseNr = SERVICE.getWarehouseService().getNewPurchaseOrderNumber();
             System.out.printf("Creating purchase order Nr.: %d\n", purchaseNr);
             System.out.println("***********************");
             PurchaseOrder purchaseOrder = new PurchaseOrder(purchaseNr);
@@ -665,8 +685,8 @@ public class Main {
 
     private static void updatePurchaseOrder(PurchaseOrder purchaseOrder, PurchaseOrderLine purchaseOrderLine)
             throws WrongDataPathExeption, IOException, NegativeBalanceException {
-        accountingService.updateCashBalance(-purchaseOrderLine.getLineQuantity(), BANK_ACCOUNT);
-        warehouseService.getDataService().addItemToPurchaseOrder(purchaseOrderLine);
+        SERVICE.getAccountingService().updateCashBalance(-purchaseOrderLine.getLineQuantity(), BANK_ACCOUNT);
+        SERVICE.getWarehouseService().getDataService().addItemToPurchaseOrder(purchaseOrderLine);
         purchaseOrder.addPurchaseOrderLinesToOrder(purchaseOrderLine);
         System.out.printf("Item %s was successfully added to order %d\n", purchaseOrderLine.getItemName(), purchaseOrder.getOrderID());
     }
@@ -688,7 +708,7 @@ public class Main {
             }
         } while (true);
         try {
-            warehouseService.receiveGoods(purchaseNr);
+            SERVICE.getWarehouseService().receiveGoods(purchaseNr);
             System.out.println("Goods successfully added to warehouse stock");
             System.out.println("**********************");
         } catch (PurchaseOrderDoesNotExistExeption | IOException e) {
@@ -697,7 +717,7 @@ public class Main {
     }
 
     private static void showWarehouseStock() {
-        ArrayList<Item> stock = warehouseService.getDataService().getAllWarehouseItems();
+        ArrayList<Item> stock = SERVICE.getWarehouseService().getDataService().getAllWarehouseItems();
 
         if (stock == null) {
             System.out.println("Warehouse is empty");
@@ -717,7 +737,7 @@ public class Main {
 
         if (requestedID.startsWith("SF ") || requestedID.startsWith("RE ")) {
             try {
-                return accountingService.getDocumentByID(requestedID);
+                return SERVICE.getAccountingService().getDocumentByID(requestedID);
             } catch (WrongDataPathExeption | ClientDoesNotExistExeption e) {
                 System.out.println(e.getMessage());
                 return null;
@@ -730,20 +750,20 @@ public class Main {
     private static void updateSalesLine(Item item, SalesOrderLine salesOrderLine)
             throws WrongDataPathExeption, IOException, NegativeBalanceException, ItemIsNotInWarehouseExeption {
 //        accountingService.updateBalance(salesOrderLine);
-        warehouseService.updateWarehouseStock(item, -salesOrderLine.getLineQuantity());
+        SERVICE.getWarehouseService().updateWarehouseStock(item, -salesOrderLine.getLineQuantity());
         CashRecord cashRecord =
                 new SalesCashRecord
                         (salesOrderLine.getOrderNr(), LocalDate.now(), salesOrderLine.getLineAmount(), salesOrderLine.getSalesmanID());
-        accountingService.updateCashRecords(cashRecord);
+        SERVICE.getAccountingService().updateCashRecords(cashRecord);
     }
 
     private static void makeGoodsReturn(SalesOrder salesOrder, ReturnOrderLine returnOrderLine, ReturnedItem returnedItem, User currentUser)
             throws NegativeBalanceException, IOException, WrongDataPathExeption, ItemIsNotInWarehouseExeption {
-        accountingService.updateCashBalance(-returnOrderLine.getLineAmount(), BANK_ACCOUNT);
-        warehouseService.updateWarehouseStock(returnedItem, returnOrderLine.getLineQuantity());
-        accountingService.refreshSalesOrdersQuantity(salesOrder, returnedItem, returnOrderLine.getLineQuantity());
-        CashRecord cashRecord = new ReturnCashRecord(returnOrderLine.getOrderNr(), LocalDate.now(), returnOrderLine.getLineAmount(), currentUser.getUsername());
-        accountingService.updateCashRecords(cashRecord);
+        SERVICE.getAccountingService().updateCashBalance(-returnOrderLine.getLineAmount(), BANK_ACCOUNT);
+        SERVICE.getWarehouseService().updateWarehouseStock(returnedItem, returnOrderLine.getLineQuantity());
+        SERVICE.getAccountingService().refreshSalesOrdersQuantity(salesOrder, returnedItem, returnOrderLine.getLineQuantity());
+        CashRecord cashRecord = new ReturnCashRecord(returnOrderLine.getOrderNr(), LocalDate.now(), returnOrderLine.getLineAmount(), currentUser.username());
+        SERVICE.getAccountingService().updateCashRecords(cashRecord);
     }
 
     private static double getPurchasePriceFromScanner(Scanner scanner) {
@@ -782,7 +802,7 @@ public class Main {
             String itemName = scanner.nextLine();
 
             try {
-                return warehouseService.getItemFromWarehouse(itemName);
+                return SERVICE.getWarehouseService().getItemFromWarehouse(itemName);
             } catch (ItemIsNotInWarehouseExeption e) {
                 System.out.println(e.getMessage());
             }
@@ -790,7 +810,7 @@ public class Main {
     }
 
     private static void loginAsITSupport(Scanner scanner, User currentUser) {
-        System.out.printf("Welcome, %s %s!\n", currentUser.getName(), currentUser.getSurname());
+        System.out.printf("Welcome, %s %s!\n", currentUser.name(), currentUser.surname());
         while (true) {
             printITSupportMenu();
             switch (getChoiceFromScanner(scanner, 3)) {
@@ -815,11 +835,11 @@ public class Main {
     }
 
     private static void printListOfUsers() {
-        ArrayList<User> users = adminService.getDataService().getAllUsers();
+        ArrayList<User> users = SERVICE.getDataService().getAllUsers();
         System.out.println("********************");
         for (User user : users) {
             System.out.printf("Username: %s, User: %s %s, User Role: %s\n",
-                    user.getUsername(), user.getName(), user.getSurname(), user.getUserType());
+                    user.username(), user.name(), user.surname(), user.userType());
             System.out.println("********************");
         }
     }
@@ -834,28 +854,33 @@ public class Main {
         System.out.print("Enter surname of user: ");
         String surname = scanner.nextLine();
         UserType type = getUserType(scanner);
+        if(username == null){
+            System.out.println("User cannot be added -> Database Error");
+        }
         try {
-            adminService.addNewUser(new User(name, surname, username, password, type));
+            SERVICE.getDataService().getAdmin().addNewUser(new User(name, surname, username, password, type));
             System.out.printf("User %s successfully added\n", username);
         } catch (IOException e) {
             System.out.printf("User %s cannot be added\n", username);
+        } catch (SQLException e) {
+            System.out.println("Database ERROR");
         }
     }
 
     private static void removeUserByUsername(Scanner scanner, User currentUser) {
         System.out.println("Enter username of user to delete: ");
         String username = scanner.nextLine();
-        if (currentUser.getUsername().equals(username)) {
+        if (currentUser.username().equals(username)) {
             System.out.println("ATTENTION!!! You cannot delete yourself!!!");
             return;
         }
 
         try {
-            adminService.removeUser(username);
+            SERVICE.getDataService().getAdmin().removeUser(username);
             System.out.printf("User %s has been deleted\n", username);
         } catch (UserNotFoundException e) {
             System.out.println(e.getMessage());
-        } catch (IOException e) {
+        } catch (IOException | SQLException e) {
             System.out.println("Database file was not found");
         }
     }
@@ -864,10 +889,15 @@ public class Main {
         while (true) {
             System.out.print("Enter username: ");
             String username = scanner.nextLine();
-            if (adminService.isUsernameUnique(username)) {
-                return username;
-            } else {
-                System.out.println("Username is already in database, try again");
+            try {
+                if (SERVICE.getDataService().getAdmin().isUsernameUnique(username)) {
+                    return username;
+                } else {
+                    System.out.println("Username is already in database, try again");
+                }
+            } catch (SQLException e) {
+                System.out.println("Cannot access database");
+                return null;
             }
         }
     }
@@ -891,10 +921,10 @@ public class Main {
                     return UserType.ACCOUNTING;
                 }
                 case 2 -> {
-                    return UserType.SALESPERSON;
+                    return UserType.SALES;
                 }
                 case 3 -> {
-                    return UserType.IT_SUPPORT;
+                    return UserType.ADMIN;
                 }
                 default -> System.out.println("Unavailable option");
             }

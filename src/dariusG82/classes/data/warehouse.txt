@@ -1,7 +1,7 @@
 Tusinukas
 0.25
 0.39
-920
+910
 
 Trintukas
 0.09

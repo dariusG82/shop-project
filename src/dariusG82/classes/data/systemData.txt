@@ -1,12 +1,12 @@
-0|CurrentDate-2022-04-30
+0|CurrentDate-2022-05-02
 
 1|PurchaseOrdersNr-5
 
-2|SalesOrderNumber-6
+2|SalesOrderNumber-7
 
-3|ReturnOrderNr-4
+3|ReturnOrderNr-5
 
-4|CashRegisterBalance=170.5
+4|CashRegisterBalance=178.3
 
-5|BankAccountBalance=99731.2
+5|BankAccountBalance=99727.3
 

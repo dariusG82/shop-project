@@ -1,4 +1,4 @@
-package dariusG82.classes.data;
+package dariusG82.classes.data.interfaces;
 
 import dariusG82.classes.accounting.DailyReport;
 import dariusG82.classes.accounting.finance.CashRecord;
@@ -14,9 +14,9 @@ import java.util.ArrayList;
 
 public interface DataManagement {
 
-    ArrayList<String> getDataStrings();
-
-    void updateDataStrings(ArrayList<String> updatedDataStrings) throws IOException;
+//    ArrayList<String> getDataStrings();
+//
+//    void updateDataStrings(ArrayList<String> updatedDataStrings) throws IOException;
 
     void rewriteDailyReports(ArrayList<DailyReport> dailyReports) throws IOException;
 
@@ -47,5 +47,15 @@ public interface DataManagement {
     void updatePurchaseOrderLines(ArrayList<PurchaseOrderLine> orderLines) throws IOException;
 
     void addItemToPurchaseOrder(PurchaseOrderLine orderLine) throws IOException;
+
+    AdminInterface getAdmin();
+
+    AccountingInterface getAccounting();
+
+    BusinessInterface getBusiness();
+
+    WarehouseInterface getWarehouse();
+
 }
+
 
